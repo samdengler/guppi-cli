@@ -382,19 +382,18 @@ def _install_from_path(name: str, from_path: str):
     
     # Determine if it's a local path or remote repo
     if Path(from_path).exists():
-        # Local path - use uv pip install
-        cmd = ["uv", "pip", "install", "-e", from_path]
+        # Local path - use uv tool install with editable mode
+        cmd = ["uv", "tool", "install", "--editable", from_path]
     else:
-        # Remote repo - for now, just error out (we'll add this next)
-        typer.echo(f"Error: Remote installation not yet implemented", err=True)
-        typer.echo(f"Use a local path for now", err=True)
-        raise typer.Exit(1)
+        # Remote repo - use uv tool install with git URL
+        cmd = ["uv", "tool", "install", f"git+{from_path}"]
     
     try:
-        result = subprocess.run(cmd, check=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        typer.echo(result.stdout)
         typer.echo(f"✓ Tool '{name}' installed successfully!")
     except subprocess.CalledProcessError as e:
-        typer.echo(f"Error installing tool: {e}", err=True)
+        typer.echo(f"Error installing tool: {e.stderr}", err=True)
         raise typer.Exit(1)
     except FileNotFoundError:
         typer.echo(f"Error: 'uv' command not found. Please install uv first.", err=True)
