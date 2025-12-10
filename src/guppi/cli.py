@@ -1,6 +1,7 @@
 """GUPPI CLI - Plugin framework for composing tools"""
 
 import sys
+import subprocess
 import typer
 
 from guppi.commands import tool
@@ -42,6 +43,31 @@ def main(
     pass
 
 
+@app.command("upgrade")
+def upgrade():
+    """
+    Upgrade guppi CLI to the latest version.
+    
+    Uses uv to upgrade the guppi installation.
+    """
+    try:
+        typer.echo("Upgrading guppi...")
+        result = subprocess.run(
+            ["uv", "tool", "upgrade", "guppi"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        typer.echo(result.stdout)
+        typer.echo("✓ guppi upgraded successfully!")
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Error upgrading guppi: {e.stderr}", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: 'uv' command not found. Please install uv first.", err=True)
+        raise typer.Exit(1)
+
+
 def main_entry():
     """
     Main entry point that handles both subcommands and tool routing.
@@ -51,7 +77,7 @@ def main_entry():
         first_arg = sys.argv[1]
         
         # If it's a flag (starts with -) or a known subcommand, let Typer handle it
-        if first_arg.startswith("-") or first_arg in ["tool"]:
+        if first_arg.startswith("-") or first_arg in ["tool", "upgrade"]:
             app()
             return
         
