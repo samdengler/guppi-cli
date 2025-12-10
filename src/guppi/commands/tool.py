@@ -63,6 +63,78 @@ def source_add(
             raise typer.Exit(1)
 
 
+@source_app.command("list")
+def source_list():
+    """
+    List all tool sources.
+    
+    Shows configured sources with their paths and types (git/local).
+    """
+    sources_dir = get_sources_dir()
+    
+    if not sources_dir.exists():
+        typer.echo("No sources configured")
+        typer.echo("\nAdd sources with: guppi tool source add <name> <url>")
+        return
+    
+    # Collect source information
+    sources = []
+    for source_path in sources_dir.iterdir():
+        if not source_path.is_dir():
+            continue
+        
+        name = source_path.name
+        
+        # Check if it's a symlink (local) or git repo
+        if source_path.is_symlink():
+            source_type = "local"
+            target = source_path.resolve()
+            location = str(target)
+        elif (source_path / ".git").exists():
+            source_type = "git"
+            # Try to get git remote URL
+            try:
+                result = subprocess.run(
+                    ["git", "-C", str(source_path), "remote", "get-url", "origin"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                location = result.stdout.strip()
+            except subprocess.CalledProcessError:
+                location = str(source_path)
+        else:
+            source_type = "unknown"
+            location = str(source_path)
+        
+        sources.append({
+            "name": name,
+            "type": source_type,
+            "location": location
+        })
+    
+    if not sources:
+        typer.echo("No sources configured")
+        typer.echo("\nAdd sources with: guppi tool source add <name> <url>")
+        return
+    
+    # Sort by name
+    sources.sort(key=lambda x: x["name"])
+    
+    # Display
+    typer.echo("Tool sources:\n")
+    max_name = max(len(s["name"]) for s in sources)
+    max_type = max(len(s["type"]) for s in sources)
+    
+    typer.echo(f"{'NAME':<{max_name}}  {'TYPE':<{max_type}}  LOCATION")
+    typer.echo("-" * (max_name + max_type + 60))
+    
+    for source in sources:
+        typer.echo(f"{source['name']:<{max_name}}  {source['type']:<{max_type}}  {source['location']}")
+    
+    typer.echo(f"\nTotal: {len(sources)} source(s) configured")
+
+
 @app.command("update")
 def update(
     source: str = typer.Argument(None, help="Specific source to update (updates all if not provided)"),
