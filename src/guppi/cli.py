@@ -25,8 +25,8 @@ def main_entry():
     if len(sys.argv) > 1:
         first_arg = sys.argv[1]
         
-        # If it's a known subcommand, let Typer handle it
-        if first_arg in ["tool"]:
+        # If it's a flag (starts with -) or a known subcommand, let Typer handle it
+        if first_arg.startswith("-") or first_arg in ["tool"]:
             app()
             return
         
