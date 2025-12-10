@@ -1,6 +1,7 @@
 """Tool management commands"""
 
 import subprocess
+import shutil
 from pathlib import Path
 import typer
 
@@ -187,6 +188,68 @@ def search(
         typer.echo(f"{tool.name:<{max_name}}  {source:<{max_source}}  {tool.description}")
 
 
+@app.command("list")
+def list_tools():
+    """
+    List installed GUPPI tools.
+    
+    Shows all tools that are currently installed and available for routing.
+    """
+    typer.echo("Installed tools:\n")
+    
+    # Look for guppi-* executables in PATH
+    installed = []
+    
+    # Get PATH directories
+    path_env = subprocess.run(
+        ["printenv", "PATH"],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout.strip()
+    
+    path_dirs = [Path(p) for p in path_env.split(":") if p]
+    
+    # Search for guppi-* executables
+    seen = set()
+    for path_dir in path_dirs:
+        if not path_dir.exists():
+            continue
+        
+        try:
+            for item in path_dir.iterdir():
+                if item.name.startswith("guppi-") and item.is_file():
+                    # Check if executable
+                    if item.stat().st_mode & 0o111:  # Has execute permission
+                        tool_name = item.name.replace("guppi-", "")
+                        if tool_name not in seen:
+                            installed.append({
+                                "name": tool_name,
+                                "path": str(item)
+                            })
+                            seen.add(tool_name)
+        except PermissionError:
+            continue
+    
+    if not installed:
+        typer.echo("No tools installed")
+        typer.echo("\nInstall tools with: guppi tool install <name>")
+        return
+    
+    # Sort by name
+    installed.sort(key=lambda x: x["name"])
+    
+    # Display
+    max_name = max(len(t["name"]) for t in installed)
+    typer.echo(f"{'NAME':<{max_name}}  EXECUTABLE")
+    typer.echo("-" * (max_name + 50))
+    
+    for tool in installed:
+        typer.echo(f"{tool['name']:<{max_name}}  {tool['path']}")
+    
+    typer.echo(f"\nTotal: {len(installed)} tool(s) installed")
+
+
 @app.command("install")
 def install(
     name: str = typer.Argument(..., help="Name of the tool to install"),
@@ -241,13 +304,3 @@ def _install_from_path(name: str, from_path: str):
     except FileNotFoundError:
         typer.echo(f"Error: 'uv' command not found. Please install uv first.", err=True)
         raise typer.Exit(1)
-
-
-@app.command("list")
-def list_tools():
-    """
-    List installed GUPPI tools.
-    """
-    # TODO: Implement tool discovery
-    typer.echo("Tool listing not yet implemented")
-    raise typer.Exit(1)
