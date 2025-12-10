@@ -62,6 +62,83 @@ def source_add(
             raise typer.Exit(1)
 
 
+@app.command("update")
+def update(
+    source: str = typer.Argument(None, help="Specific source to update (updates all if not provided)"),
+):
+    """
+    Update tool sources.
+    
+    Examples:
+        guppi tool update              # Update all sources
+        guppi tool update guppi-tools  # Update specific source
+    """
+    sources_dir = get_sources_dir()
+    
+    if source:
+        # Update specific source
+        source_path = sources_dir / source
+        if not source_path.exists():
+            typer.echo(f"Error: Source '{source}' not found", err=True)
+            raise typer.Exit(1)
+        
+        sources_to_update = [(source, source_path)]
+    else:
+        # Update all sources
+        sources_to_update = [
+            (path.name, path) 
+            for path in sources_dir.iterdir() 
+            if path.is_dir()
+        ]
+        
+        if not sources_to_update:
+            typer.echo("No sources to update")
+            return
+    
+    # Update each source
+    updated = 0
+    skipped = 0
+    errors = 0
+    
+    for name, path in sources_to_update:
+        # Skip symlinks (local sources)
+        if path.is_symlink():
+            typer.echo(f"⊘ Skipping '{name}' (local source)")
+            skipped += 1
+            continue
+        
+        # Check if it's a git repo
+        git_dir = path / ".git"
+        if not git_dir.exists():
+            typer.echo(f"⊘ Skipping '{name}' (not a git repository)")
+            skipped += 1
+            continue
+        
+        typer.echo(f"Updating '{name}'...")
+        try:
+            result = subprocess.run(
+                ["git", "pull"],
+                cwd=path,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            
+            # Check if anything was updated
+            if "Already up to date" in result.stdout:
+                typer.echo(f"  ✓ Already up to date")
+            else:
+                typer.echo(f"  ✓ Updated")
+            updated += 1
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"  ✗ Error: {e.stderr}", err=True)
+            errors += 1
+    
+    # Summary
+    typer.echo()
+    typer.echo(f"Updated: {updated}, Skipped: {skipped}, Errors: {errors}")
+
+
 @app.command("install")
 def install(
     name: str = typer.Argument(..., help="Name of the tool to install"),
