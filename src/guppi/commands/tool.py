@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 import typer
 
-from guppi.discovery import get_sources_dir
+from guppi.discovery import get_sources_dir, find_tool
 
 app = typer.Typer(help="Manage GUPPI tools")
 
@@ -142,20 +142,36 @@ def update(
 @app.command("install")
 def install(
     name: str = typer.Argument(..., help="Name of the tool to install"),
-    from_path: str = typer.Option(None, "--from", help="GitHub repo or local path"),
+    from_path: str = typer.Option(None, "--from", help="GitHub repo or local path (optional if tool is in sources)"),
 ):
     """
     Install a GUPPI tool.
     
     Examples:
-        guppi tool install dummy --from ../guppi-tools/dummy
-        guppi tool install dummy --from github.com/user/guppi-tools --subdirectory dummy
+        guppi tool install dummy                      # Install from sources
+        guppi tool install dummy --from ~/dev/dummy   # Install from local path
     """
-    if not from_path:
-        typer.echo(f"Error: --from is required", err=True)
-        typer.echo("Usage: guppi tool install <name> --from <path-or-repo>", err=True)
+    # If --from is provided, use it directly
+    if from_path:
+        _install_from_path(name, from_path)
+        return
+    
+    # Otherwise, look up tool in sources
+    typer.echo(f"Looking for '{name}' in sources...")
+    tool = find_tool(name)
+    
+    if not tool:
+        typer.echo(f"Error: Tool '{name}' not found in any source", err=True)
+        typer.echo(f"Try: guppi tool search", err=True)
+        typer.echo(f"Or: guppi tool install {name} --from <path>", err=True)
         raise typer.Exit(1)
     
+    typer.echo(f"Found '{name}' in source '{tool.source}'")
+    _install_from_path(name, str(tool.path))
+
+
+def _install_from_path(name: str, from_path: str):
+    """Helper to install a tool from a given path"""
     typer.echo(f"Installing tool '{name}' from {from_path}...")
     
     # Determine if it's a local path or remote repo
