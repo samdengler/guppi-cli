@@ -1,10 +1,9 @@
 """GUPPI CLI - Plugin framework for composing tools"""
 
 import sys
-import subprocess
 import typer
 
-from guppi.commands import tool
+from guppi.commands import tool, upgrade
 from guppi.router import route_to_tool
 
 __version__ = "0.1.0"
@@ -26,6 +25,7 @@ app = typer.Typer(
 
 # Register subcommands
 app.add_typer(tool.app, name="tool")
+app.add_typer(upgrade.app, name="upgrade")
 
 
 @app.callback()
@@ -41,31 +41,6 @@ def main(
 ):
     """GUPPI - General Use Personal Program Interface"""
     pass
-
-
-@app.command("upgrade")
-def upgrade():
-    """
-    Upgrade guppi CLI to the latest version.
-    
-    Uses uv to upgrade the guppi installation.
-    """
-    try:
-        typer.echo("Upgrading guppi...")
-        result = subprocess.run(
-            ["uv", "tool", "upgrade", "guppi"],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        typer.echo(result.stdout)
-        typer.echo("✓ guppi upgraded successfully!")
-    except subprocess.CalledProcessError as e:
-        typer.echo(f"Error upgrading guppi: {e.stderr}", err=True)
-        raise typer.Exit(1)
-    except FileNotFoundError:
-        typer.echo("Error: 'uv' command not found. Please install uv first.", err=True)
-        raise typer.Exit(1)
 
 
 def main_entry():
