@@ -107,20 +107,48 @@ def discover_all_tools() -> list[ToolMetadata]:
     return all_tools
 
 
-def find_tool(name: str) -> Optional[ToolMetadata]:
+def find_tool(name: str, source: Optional[str] = None) -> Optional[ToolMetadata]:
     """
-    Find a specific tool by name.
+    Find a specific tool by name, optionally filtered by source.
+    
+    Args:
+        name: Name of the tool to find
+        source: Optional source name to filter by
+    
+    Returns:
+        Tool metadata if found (and unique or source specified), None otherwise
+    """
+    all_tools = discover_all_tools()
+    
+    matches = [tool for tool in all_tools if tool.name == name]
+    
+    if not matches:
+        return None
+    
+    # If source specified, filter by source
+    if source:
+        matches = [tool for tool in matches if tool.source == source]
+        if not matches:
+            return None
+        return matches[0]
+    
+    # If multiple matches without source specification, return None
+    # (caller should handle ambiguity)
+    if len(matches) > 1:
+        return None
+    
+    return matches[0]
+
+
+def find_all_tools(name: str) -> list[ToolMetadata]:
+    """
+    Find all tools matching the given name across all sources.
     
     Args:
         name: Name of the tool to find
     
     Returns:
-        Tool metadata if found, None otherwise
+        List of all matching tool metadata
     """
     all_tools = discover_all_tools()
-    
-    for tool in all_tools:
-        if tool.name == name:
-            return tool
-    
-    return None
+    return [tool for tool in all_tools if tool.name == name]

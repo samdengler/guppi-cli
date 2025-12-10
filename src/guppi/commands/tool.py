@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 import typer
 
-from guppi.discovery import get_sources_dir, find_tool, discover_all_tools
+from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools
 
 app = typer.Typer(help="Manage GUPPI tools")
 
@@ -326,12 +326,14 @@ def list_tools():
 def install(
     name: str = typer.Argument(..., help="Name of the tool to install"),
     from_path: str = typer.Option(None, "--from", help="GitHub repo or local path (optional if tool is in sources)"),
+    source: str = typer.Option(None, "--source", help="Source name to install from (required if tool exists in multiple sources)"),
 ):
     """
     Install a GUPPI tool.
     
     Examples:
         guppi tool install dummy                      # Install from sources
+        guppi tool install dummy --source guppi-tools # Install from specific source
         guppi tool install dummy --from ~/dev/dummy   # Install from local path
     """
     # If --from is provided, use it directly
@@ -341,12 +343,33 @@ def install(
     
     # Otherwise, look up tool in sources
     typer.echo(f"Looking for '{name}' in sources...")
-    tool = find_tool(name)
     
-    if not tool:
+    # Check if tool exists in multiple sources
+    all_matches = find_all_tools(name)
+    
+    if not all_matches:
         typer.echo(f"Error: Tool '{name}' not found in any source", err=True)
         typer.echo(f"Try: guppi tool search", err=True)
         typer.echo(f"Or: guppi tool install {name} --from <path>", err=True)
+        raise typer.Exit(1)
+    
+    # If multiple matches and no source specified, require disambiguation
+    if len(all_matches) > 1 and not source:
+        typer.echo(f"Error: Tool '{name}' found in multiple sources:", err=True)
+        for match in all_matches:
+            typer.echo(f"  - {match.source}", err=True)
+        typer.echo(f"\nPlease specify a source:", err=True)
+        typer.echo(f"  guppi tool install {name} --source <source-name>", err=True)
+        raise typer.Exit(1)
+    
+    # Find the tool (with optional source filter)
+    tool = find_tool(name, source)
+    
+    if not tool:
+        if source:
+            typer.echo(f"Error: Tool '{name}' not found in source '{source}'", err=True)
+        else:
+            typer.echo(f"Error: Tool '{name}' not found", err=True)
         raise typer.Exit(1)
     
     typer.echo(f"Found '{name}' in source '{tool.source}'")
