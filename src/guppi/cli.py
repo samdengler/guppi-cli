@@ -6,6 +6,16 @@ import typer
 from guppi.commands import tool
 from guppi.router import route_to_tool
 
+__version__ = "0.1.0"
+
+
+def version_callback(value: bool):
+    """Print version and exit."""
+    if value:
+        typer.echo(f"guppi version {__version__}")
+        raise typer.Exit()
+
+
 # Create main app
 app = typer.Typer(
     help="GUPPI - General Use Personal Program Interface",
@@ -15,6 +25,21 @@ app = typer.Typer(
 
 # Register subcommands
 app.add_typer(tool.app, name="tool")
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        help="Show version and exit",
+        callback=version_callback,
+        is_eager=True,
+    ),
+):
+    """GUPPI - General Use Personal Program Interface"""
+    pass
 
 
 def main_entry():
