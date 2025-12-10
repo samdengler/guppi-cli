@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 import typer
 
-from guppi.discovery import get_sources_dir, find_tool
+from guppi.discovery import get_sources_dir, find_tool, discover_all_tools
 
 app = typer.Typer(help="Manage GUPPI tools")
 
@@ -137,6 +137,54 @@ def update(
     # Summary
     typer.echo()
     typer.echo(f"Updated: {updated}, Skipped: {skipped}, Errors: {errors}")
+
+
+@app.command("search")
+def search(
+    query: str = typer.Argument(None, help="Search query (optional - shows all if not provided)"),
+):
+    """
+    Search for available tools in all sources.
+    
+    Examples:
+        guppi tool search       # List all available tools
+        guppi tool search beads # Search for tools matching 'beads'
+    """
+    typer.echo("Searching for tools...")
+    tools = discover_all_tools()
+    
+    if not tools:
+        typer.echo("No tools found in sources")
+        typer.echo("Add a source with: guppi tool source add <name> <url>")
+        return
+    
+    # Filter by query if provided
+    if query:
+        query_lower = query.lower()
+        tools = [
+            t for t in tools 
+            if query_lower in t.name.lower() or query_lower in t.description.lower()
+        ]
+        
+        if not tools:
+            typer.echo(f"No tools found matching '{query}'")
+            return
+    
+    # Display results
+    typer.echo(f"\nFound {len(tools)} tool(s):\n")
+    
+    # Find max widths for formatting
+    max_name = max(len(t.name) for t in tools)
+    max_source = max(len(t.source or "unknown") for t in tools)
+    
+    # Print header
+    typer.echo(f"{'NAME':<{max_name}}  {'SOURCE':<{max_source}}  DESCRIPTION")
+    typer.echo("-" * (max_name + max_source + 50))
+    
+    # Print tools
+    for tool in sorted(tools, key=lambda t: t.name):
+        source = tool.source or "unknown"
+        typer.echo(f"{tool.name:<{max_name}}  {source:<{max_source}}  {tool.description}")
 
 
 @app.command("install")
