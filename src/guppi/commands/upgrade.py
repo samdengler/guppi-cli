@@ -3,6 +3,8 @@
 import subprocess
 import typer
 
+from guppi.__version__ import __version__
+
 app = typer.Typer(help="Upgrade guppi CLI")
 
 
@@ -17,15 +19,29 @@ def upgrade(ctx: typer.Context):
         return
     
     try:
-        typer.echo("Upgrading guppi...")
+        current_version = __version__
+        typer.echo(f"Current version: {current_version}")
+        typer.echo("Checking for updates...")
+        
         result = subprocess.run(
             ["uv", "tool", "upgrade", "guppi"],
             check=True,
             capture_output=True,
             text=True
         )
-        typer.echo(result.stdout)
-        typer.echo("✓ guppi upgraded successfully!")
+        
+        output = result.stdout.strip() + result.stderr.strip()
+        
+        # Check if already up-to-date
+        if "Nothing to upgrade" in output or "Nothing to upgrade" in result.stdout:
+            typer.echo(f"✓ guppi is already up-to-date (version {current_version})")
+        else:
+            # Show uv output which includes version changes
+            if output:
+                typer.echo(output)
+            typer.echo("✓ guppi upgraded successfully!")
+            typer.echo("\nRun 'guppi --version' to see the new version")
+            
     except subprocess.CalledProcessError as e:
         typer.echo(f"Error upgrading guppi: {e.stderr}", err=True)
         raise typer.Exit(1)
