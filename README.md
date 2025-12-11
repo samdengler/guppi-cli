@@ -59,3 +59,7 @@ uv pip install -e .
 # Test
 guppi dummy test
 ```
+
+## Inspiration
+
+This project is inspired by [GUPPI from the Bobiverse series](https://bobiverse.fandom.com/wiki/GUPPI).
