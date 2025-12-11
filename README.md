@@ -4,6 +4,10 @@
 
 A plugin framework for composing deterministic tools through a unified CLI.
 
+## Disclaimer
+
+This project is built for my personal use and assistance. You are welcome to fork it for your own purposes, but please note that it is **unsupported** and provided as-is. Use at your own risk.
+
 ## Ultra-Lean MVP
 
 This is the minimal viable version that proves the plugin architecture works.
