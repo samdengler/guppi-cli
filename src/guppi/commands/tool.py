@@ -138,6 +138,143 @@ def source_list():
     typer.echo(f"\nTotal: {len(sources)} source(s) configured")
 
 
+@source_app.command("init")
+def source_init(
+    directory: str = typer.Argument(".", help="Directory to initialize (defaults to current directory)"),
+    name: str = typer.Option(None, "--name", help="Name for the source (defaults to directory basename)"),
+    description: str = typer.Option("A GUPPI tool source", "--description", help="Description of the source"),
+    git: bool = typer.Option(True, "--git/--no-git", help="Initialize as git repository"),
+    template: str = typer.Option("minimal", "--template", help="Template to use: 'minimal' or 'example'"),
+):
+    """
+    Initialize a directory as a GUPPI tool source.
+
+    Creates the basic structure for a tool source including pyproject.toml
+    with [tool.guppi.source] metadata, README.md, and .gitignore.
+
+    Examples:
+        guppi tool source init                          # Init current directory
+        guppi tool source init ~/my-tools               # Init specific directory
+        guppi tool source init . --name my-tools        # Init with custom name
+        guppi tool source init --template example       # Init with example tool
+    """
+    # Resolve directory path
+    directory = os.path.expanduser(directory)  # Expand ~
+    directory = os.path.abspath(directory)      # Make absolute
+    target_path = Path(directory)
+
+    # Determine source name
+    if not name:
+        name = target_path.name
+
+    # Sanitize name (replace spaces and special chars with dashes)
+    name = re.sub(r'[^a-zA-Z0-9-]', '-', name)
+    name = re.sub(r'-+', '-', name)  # Collapse multiple dashes
+    name = name.strip('-')  # Remove leading/trailing dashes
+
+    # Create directory if it doesn't exist
+    if not target_path.exists():
+        typer.echo(f"Creating directory: {target_path}")
+        target_path.mkdir(parents=True, exist_ok=True)
+
+    # Check if already a valid source
+    is_valid, source_meta = is_valid_source(target_path)
+    if is_valid:
+        typer.echo(f"Error: {target_path} is already a GUPPI tool source", err=True)
+        if source_meta:
+            typer.echo(f"  Source name: {source_meta.get('name', 'unknown')}", err=True)
+        raise typer.Exit(1)
+
+    # Check if directory is non-empty
+    if target_path.exists() and any(target_path.iterdir()):
+        typer.echo(f"Warning: Directory '{target_path}' is not empty")
+        confirm = typer.confirm("Continue initializing in this directory?")
+        if not confirm:
+            typer.echo("Aborted")
+            raise typer.Exit(0)
+
+    # Create pyproject.toml from template
+    typer.echo(f"Initializing GUPPI tool source '{name}'...")
+
+    pyproject_content = load_and_render_template(
+        "source/pyproject.toml",
+        name=name,
+        description=description
+    )
+    (target_path / "pyproject.toml").write_text(pyproject_content)
+
+    # Create README.md from template
+    readme_content = load_and_render_template(
+        "source/README.md",
+        name=name,
+        description=description
+    )
+    (target_path / "README.md").write_text(readme_content)
+
+    # Create .gitignore from template
+    gitignore_content = load_and_render_template("source/gitignore")
+    (target_path / ".gitignore").write_text(gitignore_content)
+
+    # If template is "example", create example tool
+    if template == "example":
+        typer.echo("Creating example tool...")
+        example_dir = target_path / "example-tool"
+        example_dir.mkdir(exist_ok=True)
+
+        # Create example tool pyproject.toml
+        example_pyproject = load_and_render_template("example-tool/pyproject.toml")
+        (example_dir / "pyproject.toml").write_text(example_pyproject)
+
+        # Create example tool README.md
+        example_readme = load_and_render_template("example-tool/README.md")
+        (example_dir / "README.md").write_text(example_readme)
+
+        # Create example tool source structure
+        src_dir = example_dir / "src" / "guppi_example"
+        src_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create __init__.py
+        example_init = load_and_render_template("example-tool/src/guppi_example/__init__.py")
+        (src_dir / "__init__.py").write_text(example_init)
+
+        # Create cli.py
+        example_cli = load_and_render_template("example-tool/src/guppi_example/cli.py")
+        (src_dir / "cli.py").write_text(example_cli)
+
+    # Git initialization
+    if git:
+        try:
+            # Check if already a git repo
+            git_dir = target_path / ".git"
+            if not git_dir.exists():
+                subprocess.run(["git", "init"], cwd=target_path, check=True, capture_output=True)
+                subprocess.run(["git", "add", "."], cwd=target_path, check=True, capture_output=True)
+                subprocess.run(
+                    ["git", "commit", "-m", "Initialize GUPPI tool source"],
+                    cwd=target_path,
+                    check=True,
+                    capture_output=True
+                )
+                typer.echo("✓ Initialized git repository")
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"Warning: Git initialization failed: {e}", err=True)
+        except FileNotFoundError:
+            typer.echo("Warning: 'git' command not found, skipping git initialization", err=True)
+
+    # Display success message
+    typer.echo(f"\n✓ Initialized GUPPI tool source '{name}' at {target_path}")
+    typer.echo("\nNext steps:")
+    typer.echo("  1. Add tools to this source (each tool in its own directory)")
+    typer.echo("  2. Each tool needs a pyproject.toml with [tool.guppi] metadata")
+    typer.echo(f"  3. Add this source to GUPPI: guppi tool source add {name} {target_path}")
+
+    if template == "example":
+        typer.echo("\n📦 Example tool created in 'example-tool/' directory")
+        typer.echo("   Install it with: guppi tool install example --from example-tool/")
+
+    typer.echo("\nSee the README.md for more details.")
+
+
 @app.command("update")
 def update(
     source: str = typer.Argument(None, help="Specific source to update (updates all if not provided)"),
