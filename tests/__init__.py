@@ -1,0 +1,1 @@
+"""GUPPI CLI test suite"""

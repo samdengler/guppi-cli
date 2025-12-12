@@ -1,4 +1,4 @@
-# GitHub Copilot Instructions for GUPPI CLI
+# Claude Code Instructions for GUPPI CLI
 
 ## Project Overview
 
@@ -83,7 +83,7 @@ guppi <command>               # Test globally installed version
 
 ## Issue Tracking with bd
 
-**CRITICAL**: This project uses **bd (beads)** for ALL task tracking. Do NOT create markdown TODO lists.
+**CRITICAL**: This project uses **bd (beads)** for ALL task tracking. Do NOT create markdown TODO lists or use TodoWrite tool.
 
 ### Essential Commands
 
@@ -107,22 +107,23 @@ bd close <id> --reason "Done" --json
 4. **Complete**: `bd close <id> --reason "Done" --json`
 5. **Sync**: Changes auto-export to `.beads/issues.jsonl` (commit together with code)
 
-For detailed workflows, see **AGENTS.md**.
+For detailed workflows, see [AGENTS.md](AGENTS.md).
 
 ## Releases
 
-For version releases, follow the procedure in **RELEASE.md**:
+For version releases, follow the procedure in [RELEASE.md](RELEASE.md):
 - Semantic versioning (major/minor/patch)
 - Update both `pyproject.toml` and `src/guppi/__version__.py`
 - Create git tag and GitHub release with `gh` CLI
 
 ## Important Rules
 
-- ✅ Use bd for ALL task tracking
+- ✅ Use bd for ALL task tracking (NOT TodoWrite tool)
 - ✅ New commands in `commands/` directory
 - ✅ Test with global install: `uv tool install --editable .`
 - ✅ Update version in both files for releases
-- ✅ Reference AGENTS.md for detailed workflows
-- ✅ Reference RELEASE.md for release procedures
+- ✅ Reference [AGENTS.md](AGENTS.md) for detailed workflows
+- ✅ Reference [RELEASE.md](RELEASE.md) for release procedures
 - ❌ Do NOT create markdown TODO lists
+- ❌ Do NOT use TodoWrite tool
 - ❌ Do NOT commit `.beads/beads.db` (JSONL only)

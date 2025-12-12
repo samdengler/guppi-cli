@@ -5,6 +5,10 @@ from typing import Optional
 import tomllib
 
 
+# Schema version for tool sources
+CURRENT_SCHEMA_VERSION = "1.0.0"
+
+
 class ToolMetadata:
     """Metadata for a GUPPI tool"""
     
@@ -67,7 +71,15 @@ def discover_tools_in_path(path: Path, source_name: Optional[str] = None) -> lis
             guppi_meta = data.get("tool", {}).get("guppi", {})
             if not guppi_meta:
                 continue
-            
+
+            # Skip source metadata pyproject.toml (has [tool.guppi.source], not [tool.guppi])
+            # This allows:
+            # - Tool metadata with [tool.guppi] and name -> discovered
+            # - Source metadata with [tool.guppi.source] only -> skipped
+            # - Single-tool sources with both sections -> discovered
+            if "source" in guppi_meta and "name" not in guppi_meta:
+                continue
+
             # Extract metadata
             name = guppi_meta.get("name", item.name)
             description = guppi_meta.get("description", "No description")
@@ -143,12 +155,67 @@ def find_tool(name: str, source: Optional[str] = None) -> Optional[ToolMetadata]
 def find_all_tools(name: str) -> list[ToolMetadata]:
     """
     Find all tools matching the given name across all sources.
-    
+
     Args:
         name: Name of the tool to find
-    
+
     Returns:
         List of all matching tool metadata
     """
     all_tools = discover_all_tools()
     return [tool for tool in all_tools if tool.name == name]
+
+
+def is_valid_source(path: Path) -> tuple[bool, Optional[dict]]:
+    """Check if directory has valid [tool.guppi.source] metadata.
+
+    Args:
+        path: Directory path to check
+
+    Returns:
+        Tuple of (is_valid, source_metadata or None)
+        - is_valid: True if directory has valid source metadata
+        - source_metadata: Dict with source metadata if valid, None otherwise
+
+    Example:
+        >>> is_valid, meta = is_valid_source(Path("/path/to/source"))
+        >>> if is_valid:
+        ...     print(f"Source: {meta['name']}")
+    """
+    pyproject = path / "pyproject.toml"
+    if not pyproject.exists():
+        return (False, None)
+
+    try:
+        with open(pyproject, "rb") as f:
+            data = tomllib.load(f)
+        source_meta = data.get("tool", {}).get("guppi", {}).get("source", {})
+        if source_meta:
+            # Validate schema version if present
+            schema_version = source_meta.get("version", CURRENT_SCHEMA_VERSION)
+            if not is_compatible_schema(schema_version):
+                # Log warning but don't fail - be lenient
+                pass
+            return (True, source_meta)
+    except Exception:
+        pass
+
+    return (False, None)
+
+
+def is_compatible_schema(version: str) -> bool:
+    """Check if source schema version is compatible with CLI.
+
+    Args:
+        version: Schema version from [tool.guppi.source]
+
+    Returns:
+        True if compatible, False otherwise
+
+    Note:
+        Currently only version "1.0.0" exists.
+        Future versions should parse semver and check compatibility.
+    """
+    # For now, only 1.0.0 exists
+    # Future: parse semver and check compatibility
+    return version == "1.0.0"

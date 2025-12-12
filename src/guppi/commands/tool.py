@@ -1,11 +1,14 @@
 """Tool management commands"""
 
+import os
+import re
 import subprocess
 import shutil
 from pathlib import Path
 import typer
 
-from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools
+from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools, is_valid_source
+from guppi.templates import load_and_render_template
 
 app = typer.Typer(help="Manage GUPPI tools")
 
