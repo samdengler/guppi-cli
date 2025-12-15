@@ -51,6 +51,8 @@ guppi tool source update guppi-tools     # Update specific source
 guppi tool search                        # List all available tools
 guppi tool install <name>                # Install a tool
 guppi tool list                          # List installed tools
+guppi tool update                        # Update all installed tools
+guppi tool update <name>                 # Update specific tool
 guppi tool uninstall <name>              # Uninstall a tool
 ```
 

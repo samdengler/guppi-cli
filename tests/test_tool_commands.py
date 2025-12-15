@@ -345,3 +345,208 @@ class TestSourceUpdate:
             
             assert result.exit_code == 0
             assert "No sources to update" in result.output
+
+
+class TestToolUpdate:
+    """Tests for tool update command"""
+
+    def test_tool_update_specific_tool_success(self):
+        """Test updating a specific installed tool"""
+        # Mock uv tool list to show installed tools
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\nguppi-beads v0.2.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        # Mock uv tool upgrade showing update
+        upgrade_result = SimpleNamespace(
+            stdout="Updated guppi-dummy from 1.0.0 to 1.1.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [list_result, upgrade_result]
+            
+            result = runner.invoke(app, ["update", "dummy"])
+            
+            assert result.exit_code == 0
+            assert "Updating 'guppi-dummy'..." in result.output
+            assert "✓ Updated" in result.output
+            assert mock_run.call_count == 2
+            
+            # Verify uv tool upgrade was called
+            upgrade_call = mock_run.call_args_list[1]
+            assert upgrade_call[0][0] == ["uv", "tool", "upgrade", "guppi-dummy"]
+
+    def test_tool_update_already_up_to_date(self):
+        """Test updating when tool is already up to date"""
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        upgrade_result = SimpleNamespace(
+            stdout="Nothing to upgrade for guppi-dummy\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [list_result, upgrade_result]
+            
+            result = runner.invoke(app, ["update", "dummy"])
+            
+            assert result.exit_code == 0
+            assert "✓ Already up to date" in result.output
+
+    def test_tool_update_tool_not_installed(self):
+        """Test updating a tool that isn't installed"""
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.return_value = list_result
+            
+            result = runner.invoke(app, ["update", "nonexistent"])
+            
+            assert result.exit_code == 1
+            assert "Error: Tool 'guppi-nonexistent' is not installed" in result.output
+
+    def test_tool_update_all_tools(self):
+        """Test updating all installed tools"""
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\nguppi-beads v0.2.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        upgrade_result1 = SimpleNamespace(
+            stdout="Updated guppi-dummy\n",
+            stderr="",
+            returncode=0
+        )
+        
+        upgrade_result2 = SimpleNamespace(
+            stdout="Nothing to upgrade\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [list_result, upgrade_result1, upgrade_result2]
+            
+            result = runner.invoke(app, ["update"])
+            
+            assert result.exit_code == 0
+            assert "Updating 'guppi-dummy'..." in result.output
+            assert "Updating 'guppi-beads'..." in result.output
+            assert "Updated: 1" in result.output
+            assert "Up-to-date: 1" in result.output
+
+    def test_tool_update_no_tools_installed(self):
+        """Test updating when no guppi tools are installed"""
+        list_result = SimpleNamespace(
+            stdout="other-tool v1.0.0\n",  # Non-guppi tool
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.return_value = list_result
+            
+            result = runner.invoke(app, ["update"])
+            
+            assert result.exit_code == 0
+            assert "No GUPPI tools installed" in result.output
+
+    def test_tool_update_uv_not_found(self):
+        """Test when uv command is not available"""
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError()
+            
+            result = runner.invoke(app, ["update"])
+            
+            assert result.exit_code == 1
+            assert "Error: 'uv' command not found" in result.output
+
+    def test_tool_update_upgrade_error(self):
+        """Test handling upgrade errors"""
+        import subprocess
+        
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [
+                list_result,
+                subprocess.CalledProcessError(
+                    returncode=1,
+                    cmd=["uv", "tool", "upgrade", "guppi-dummy"],
+                    stderr="Network error"
+                )
+            ]
+            
+            result = runner.invoke(app, ["update", "dummy"])
+            
+            assert result.exit_code == 0  # Command succeeds but reports error
+            assert "✗ Error: Network error" in result.output
+            assert "Errors: 1" in result.output
+
+    def test_tool_update_adds_guppi_prefix(self):
+        """Test that tool name without guppi- prefix gets it added"""
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        upgrade_result = SimpleNamespace(
+            stdout="Updated\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [list_result, upgrade_result]
+            
+            # Call with just "dummy", should update "guppi-dummy"
+            result = runner.invoke(app, ["update", "dummy"])
+            
+            assert result.exit_code == 0
+            upgrade_call = mock_run.call_args_list[1]
+            assert "guppi-dummy" in upgrade_call[0][0]
+
+    def test_tool_update_filters_non_guppi_tools(self):
+        """Test that only guppi-* tools are updated"""
+        list_result = SimpleNamespace(
+            stdout="guppi-dummy v1.0.0\nother-tool v1.0.0\nguppi-beads v0.2.0\n",
+            stderr="",
+            returncode=0
+        )
+        
+        upgrade_result = SimpleNamespace(
+            stdout="Updated\n",
+            stderr="",
+            returncode=0
+        )
+        
+        with patch("guppi.commands.tool.subprocess.run") as mock_run:
+            mock_run.side_effect = [list_result, upgrade_result, upgrade_result]
+            
+            result = runner.invoke(app, ["update"])
+            
+            assert result.exit_code == 0
+            # Should only update 2 guppi tools, not other-tool
+            assert mock_run.call_count == 3  # 1 list + 2 upgrades
+            assert "guppi-dummy" in result.output
+            assert "guppi-beads" in result.output
+            assert "other-tool" not in result.output

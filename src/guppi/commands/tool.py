@@ -355,6 +355,96 @@ def source_update(
     typer.echo(f"Updated: {updated}, Skipped: {skipped}, Errors: {errors}")
 
 
+@app.command("update")
+def tool_update(
+    name: str = typer.Argument(None, help="Specific tool to update (updates all if not provided)"),
+):
+    """
+    Update installed GUPPI tools.
+    
+    Updates tools that were installed via 'guppi tool install'.
+    Uses 'uv tool upgrade' to update to the latest version.
+    
+    Examples:
+        guppi tool update              # Update all installed guppi-* tools
+        guppi tool update guppi-dummy  # Update specific tool
+    """
+    # Get list of installed guppi tools
+    try:
+        result = subprocess.run(
+            ["uv", "tool", "list"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except FileNotFoundError:
+        typer.echo("Error: 'uv' command not found. Please install uv first.", err=True)
+        raise typer.Exit(1)
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Error listing installed tools: {e.stderr}", err=True)
+        raise typer.Exit(1)
+    
+    # Parse installed tools and filter for guppi-* tools
+    installed_tools = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("guppi-"):
+            # Extract tool name (first word)
+            tool_name = line.split()[0] if line.split() else line
+            installed_tools.append(tool_name)
+    
+    if not installed_tools:
+        typer.echo("No GUPPI tools installed")
+        typer.echo("Install tools with: guppi tool install <name>")
+        return
+    
+    # Determine which tools to update
+    if name:
+        # Update specific tool
+        if not name.startswith("guppi-"):
+            name = f"guppi-{name}"
+        
+        if name not in installed_tools:
+            typer.echo(f"Error: Tool '{name}' is not installed", err=True)
+            raise typer.Exit(1)
+        
+        tools_to_update = [name]
+    else:
+        # Update all tools
+        tools_to_update = installed_tools
+    
+    # Update each tool
+    updated = 0
+    up_to_date = 0
+    errors = 0
+    
+    for tool_name in tools_to_update:
+        typer.echo(f"Updating '{tool_name}'...")
+        try:
+            result = subprocess.run(
+                ["uv", "tool", "upgrade", tool_name],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Check if anything was updated
+            output = result.stdout + result.stderr
+            if "Nothing to upgrade" in output or "already installed" in output:
+                typer.echo(f"  ✓ Already up to date")
+                up_to_date += 1
+            else:
+                typer.echo(f"  ✓ Updated")
+                updated += 1
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"  ✗ Error: {e.stderr}", err=True)
+            errors += 1
+    
+    # Summary
+    typer.echo()
+    typer.echo(f"Updated: {updated}, Up-to-date: {up_to_date}, Errors: {errors}")
+
+
 @app.command("search")
 def search(
     query: str = typer.Argument(None, help="Search query (optional - shows all if not provided)"),
