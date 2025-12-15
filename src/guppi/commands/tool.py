@@ -222,23 +222,44 @@ def source_init(
         example_dir.mkdir(exist_ok=True)
 
         # Create example tool pyproject.toml
-        example_pyproject = load_and_render_template("example-tool/pyproject.toml")
+        example_pyproject = load_and_render_template(
+            "tool/pyproject.toml",
+            tool_name="example",
+            tool_name_underscore="example",
+            description="Example GUPPI tool"
+        )
         (example_dir / "pyproject.toml").write_text(example_pyproject)
 
         # Create example tool README.md
-        example_readme = load_and_render_template("example-tool/README.md")
+        example_readme = load_and_render_template(
+            "tool/README.md",
+            tool_name="example",
+            description="Example GUPPI tool"
+        )
         (example_dir / "README.md").write_text(example_readme)
+
+        # Create .gitignore
+        gitignore_content = load_and_render_template("tool/gitignore")
+        (example_dir / ".gitignore").write_text(gitignore_content)
 
         # Create example tool source structure
         src_dir = example_dir / "src" / "guppi_example"
         src_dir.mkdir(parents=True, exist_ok=True)
 
         # Create __init__.py
-        example_init = load_and_render_template("example-tool/src/guppi_example/__init__.py")
+        example_init = load_and_render_template(
+            "tool/src/guppi_TOOLNAME/__init__.py",
+            tool_name="example"
+        )
         (src_dir / "__init__.py").write_text(example_init)
 
         # Create cli.py
-        example_cli = load_and_render_template("example-tool/src/guppi_example/cli.py")
+        example_cli = load_and_render_template(
+            "tool/src/guppi_TOOLNAME/cli.py",
+            tool_name="example",
+            tool_name_underscore="example",
+            description="Example GUPPI tool"
+        )
         (src_dir / "cli.py").write_text(example_cli)
 
     # Git initialization
@@ -367,20 +388,13 @@ def tool_init(
         )
         (src_dir / "__init__.py").write_text(init_content)
 
-        # Create cli.py based on template
-        if template == "example":
-            cli_content = load_and_render_template(
-                "tool-example/cli.py",
-                tool_name=tool_name,
-                tool_name_underscore=tool_name_underscore,
-                description=description
-            )
-        else:
-            cli_content = load_and_render_template(
-                "tool/src/guppi_TOOLNAME/cli.py",
-                tool_name=tool_name,
-                description=description
-            )
+        # Create cli.py from template
+        cli_content = load_and_render_template(
+            "tool/src/guppi_TOOLNAME/cli.py",
+            tool_name=tool_name,
+            tool_name_underscore=tool_name_underscore,
+            description=description
+        )
         (src_dir / "cli.py").write_text(cli_content)
 
         # Git initialization

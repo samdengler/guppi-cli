@@ -40,11 +40,13 @@ class TestToolInit:
         assert '[tool.guppi]' in pyproject_content
         assert 'name = "my-tool"' in pyproject_content
 
-        # Verify CLI content (minimal template)
+        # Verify CLI content (now has enhanced features)
         cli_content = (tool_dir / "src" / "guppi_my_tool" / "cli.py").read_text()
         assert "import typer" in cli_content
+        assert "from typing_extensions import Annotated" in cli_content
         assert 'app = typer.Typer(help="My test tool")' in cli_content
         assert "def hello" in cli_content
+        assert "def info" in cli_content
 
         # Verify __init__.py
         init_content = (tool_dir / "src" / "guppi_my_tool" / "__init__.py").read_text()
@@ -52,7 +54,7 @@ class TestToolInit:
         assert 'GUPPI my-tool tool' in init_content
 
     def test_init_example_template(self, mock_source_directory):
-        """Test initializing tool with example template"""
+        """Test initializing tool with example template - now just alias for default"""
         result = runner.invoke(
             app,
             [
@@ -71,7 +73,7 @@ class TestToolInit:
         tool_dir = mock_source_directory / "example-tool"
         cli_content = (tool_dir / "src" / "guppi_example_tool" / "cli.py").read_text()
 
-        # Example template should have more features
+        # All templates now have these features
         assert "from typing_extensions import Annotated" in cli_content
         assert "def hello" in cli_content
         assert "def info" in cli_content
