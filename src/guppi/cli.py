@@ -51,6 +51,13 @@ def main_entry():
     if len(sys.argv) > 1:
         first_arg = sys.argv[1]
         
+        # If it's --help, show welcome panel first
+        if first_arg in ["--help", "-h", "help"]:
+            from guppi.ui import show_welcome_panel
+            show_welcome_panel()
+            app()
+            return
+        
         # If it's a flag (starts with -) or a known subcommand, let Typer handle it
         if first_arg.startswith("-") or first_arg in ["tool", "upgrade", "uninstall"]:
             app()
@@ -62,7 +69,9 @@ def main_entry():
         exit_code = route_to_tool(tool_name, tool_args)
         sys.exit(exit_code)
     else:
-        # No args, show help
+        # No args, show help with welcome panel
+        from guppi.ui import show_welcome_panel
+        show_welcome_panel()
         app()
 
 

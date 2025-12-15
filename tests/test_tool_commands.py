@@ -110,7 +110,7 @@ class TestToolSearch:
             result = runner.invoke(app, ["search", "dem"])
 
         assert result.exit_code == 0
-        assert "Found 1 tool(s)" in result.output
+        assert "Total: 1 tool(s) found" in result.output
         assert "demo" in result.output
         assert "other" not in result.output
 

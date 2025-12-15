@@ -363,7 +363,8 @@ def search(
         guppi tool search       # List all available tools
         guppi tool search beads # Search for tools matching 'beads'
     """
-    typer.echo("Searching for tools...")
+    from guppi.ui import format_tool_search_table
+    
     tools = discover_all_tools()
     
     if not tools:
@@ -383,21 +384,8 @@ def search(
             typer.echo(f"No tools found matching '{query}'")
             return
     
-    # Display results
-    typer.echo(f"\nFound {len(tools)} tool(s):\n")
-    
-    # Find max widths for formatting
-    max_name = max(len(t.name) for t in tools)
-    max_source = max(len(t.source or "unknown") for t in tools)
-    
-    # Print header
-    typer.echo(f"{'NAME':<{max_name}}  {'SOURCE':<{max_source}}  DESCRIPTION")
-    typer.echo("-" * (max_name + max_source + 50))
-    
-    # Print tools
-    for tool in sorted(tools, key=lambda t: t.name):
-        source = tool.source or "unknown"
-        typer.echo(f"{tool.name:<{max_name}}  {source:<{max_source}}  {tool.description}")
+    # Display results with rich formatting
+    format_tool_search_table(tools)
 
 
 @app.command("list")
@@ -407,7 +395,7 @@ def list_tools():
     
     Shows all tools that are currently installed and available for routing.
     """
-    typer.echo("Installed tools:\n")
+    from guppi.ui import format_tool_list_panel
     
     # Look for guppi-* executables in PATH
     installed = []
@@ -443,23 +431,8 @@ def list_tools():
         except PermissionError:
             continue
     
-    if not installed:
-        typer.echo("No tools installed")
-        typer.echo("\nInstall tools with: guppi tool install <name>")
-        return
-    
-    # Sort by name
-    installed.sort(key=lambda x: x["name"])
-    
-    # Display
-    max_name = max(len(t["name"]) for t in installed)
-    typer.echo(f"{'NAME':<{max_name}}  EXECUTABLE")
-    typer.echo("-" * (max_name + 50))
-    
-    for tool in installed:
-        typer.echo(f"{tool['name']:<{max_name}}  {tool['path']}")
-    
-    typer.echo(f"\nTotal: {len(installed)} tool(s) installed")
+    # Display with rich formatting
+    format_tool_list_panel(installed)
 
 
 @app.command("install")

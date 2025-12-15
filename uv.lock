@@ -116,10 +116,11 @@ toml = [
 ]
 
 [[package]]
-name = "guppi"
-version = "0.2.0"
+name = "guppi-cli"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
+    { name = "rich" },
     { name = "typer" },
 ]
 
@@ -139,6 +140,7 @@ dev = [
 requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "rich", specifier = ">=14.2.0" },
     { name = "typer", specifier = ">=0.9.0" },
 ]
 provides-extras = ["dev"]

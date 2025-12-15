@@ -77,6 +77,11 @@ guppi <command>               # Test globally installed version
 - Test both `uv run -- guppi` and global `guppi` command
 - Use subprocess for external commands (uv, git)
 
+### Design and Planning
+- Feature planning and design documents go in `docs/design/`
+- Create design docs for significant new features before implementation
+- Use clear, descriptive filenames (e.g., `TOOL_MANAGEMENT.md`, `SOURCE_DISCOVERY.md`)
+
 ### Git Workflow
 - Always commit `.beads/issues.jsonl` with code changes
 - Commit and push together to keep issue state in sync
