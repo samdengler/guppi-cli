@@ -45,7 +45,7 @@ class TestMainApp:
         # but the CLI runner may return different codes
         assert "GUPPI - General Use Personal Program Interface" in result.output
         assert "tool" in result.output
-        assert "upgrade" in result.output
+        assert "update" in result.output
 
     def test_app_help_flag(self):
         """Test --help flag shows help"""
@@ -72,8 +72,8 @@ class TestMainApp:
         assert "Manage GUPPI tools" in result.output
 
     def test_app_has_upgrade_subcommand(self):
-        """Test that 'upgrade' subcommand is available"""
-        result = runner.invoke(app, ["upgrade", "--help"])
+        """Test that 'update' subcommand is available"""
+        result = runner.invoke(app, ["update", "--help"])
         assert result.exit_code == 0
         # Note: upgrade help text depends on upgrade.py
 
@@ -110,8 +110,8 @@ class TestMainEntry:
                 mock_app.assert_called_once()
 
     def test_main_entry_with_upgrade_subcommand(self):
-        """Test main_entry with 'upgrade' subcommand calls app"""
-        with patch("sys.argv", ["guppi", "upgrade"]):
+        """Test main_entry with 'update' subcommand calls app"""
+        with patch("sys.argv", ["guppi", "update"]):
             with patch("guppi.cli.app") as mock_app:
                 main_entry()
                 mock_app.assert_called_once()
@@ -154,7 +154,7 @@ class TestMainEntry:
                 mock_app.assert_called_once()
 
     def test_main_entry_distinguishes_subcommand_from_tool(self):
-        """Test that 'tool' and 'upgrade' are treated as subcommands, not tools"""
+        """Test that 'tool' and 'update' are treated as subcommands, not tools"""
         # Test 'tool' subcommand
         with patch("sys.argv", ["guppi", "tool", "list"]):
             with patch("guppi.cli.app") as mock_app:
@@ -163,8 +163,8 @@ class TestMainEntry:
                     mock_app.assert_called_once()
                     mock_route.assert_not_called()
 
-        # Test 'upgrade' subcommand
-        with patch("sys.argv", ["guppi", "upgrade"]):
+        # Test 'update' subcommand
+        with patch("sys.argv", ["guppi", "update"]):
             with patch("guppi.cli.app") as mock_app:
                 with patch("guppi.cli.route_to_tool") as mock_route:
                     main_entry()

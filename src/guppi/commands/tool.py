@@ -275,27 +275,30 @@ def source_init(
     typer.echo("\nSee the README.md for more details.")
 
 
-@app.command("update")
-def update(
-    source: str = typer.Argument(None, help="Specific source to update (updates all if not provided)"),
+@source_app.command("update")
+def source_update(
+    name: str = typer.Argument(None, help="Specific source to update (updates all if not provided)"),
 ):
     """
-    Update tool sources.
+    Update tool sources (git pull).
+    
+    Updates git repositories in ~/.guppi/sources/.
+    If no name is provided, updates all sources.
     
     Examples:
-        guppi tool update              # Update all sources
-        guppi tool update guppi-tools  # Update specific source
+        guppi tool source update                # Update all sources
+        guppi tool source update guppi-tools    # Update specific source
     """
     sources_dir = get_sources_dir()
     
-    if source:
+    if name:
         # Update specific source
-        source_path = sources_dir / source
+        source_path = sources_dir / name
         if not source_path.exists():
-            typer.echo(f"Error: Source '{source}' not found", err=True)
+            typer.echo(f"Error: Source '{name}' not found", err=True)
             raise typer.Exit(1)
         
-        sources_to_update = [(source, source_path)]
+        sources_to_update = [(name, source_path)]
     else:
         # Update all sources
         sources_to_update = [
@@ -313,21 +316,21 @@ def update(
     skipped = 0
     errors = 0
     
-    for name, path in sources_to_update:
+    for source_name, path in sources_to_update:
         # Skip symlinks (local sources)
         if path.is_symlink():
-            typer.echo(f"⊘ Skipping '{name}' (local source)")
+            typer.echo(f"⊘ Skipping '{source_name}' (local source)")
             skipped += 1
             continue
         
         # Check if it's a git repo
         git_dir = path / ".git"
         if not git_dir.exists():
-            typer.echo(f"⊘ Skipping '{name}' (not a git repository)")
+            typer.echo(f"⊘ Skipping '{source_name}' (not a git repository)")
             skipped += 1
             continue
         
-        typer.echo(f"Updating '{name}'...")
+        typer.echo(f"Updating '{source_name}'...")
         try:
             result = subprocess.run(
                 ["git", "pull"],

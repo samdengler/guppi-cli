@@ -1,19 +1,19 @@
-"""Upgrade command for guppi CLI"""
+"""Update command for guppi CLI"""
 
 import subprocess
 import typer
 
 from guppi.__version__ import __version__
 
-app = typer.Typer(help="Upgrade guppi CLI")
+app = typer.Typer(help="Update guppi CLI")
 
 
 @app.callback(invoke_without_command=True)
-def upgrade(ctx: typer.Context):
+def update(ctx: typer.Context):
     """
-    Upgrade guppi CLI to the latest version.
+    Update guppi CLI to the latest version.
     
-    Uses uv to upgrade the guppi installation.
+    Uses uv to update the guppi installation.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -39,11 +39,11 @@ def upgrade(ctx: typer.Context):
             # Show uv output which includes version changes
             if output:
                 typer.echo(output)
-            typer.echo("✓ guppi upgraded successfully!")
+            typer.echo("✓ guppi updated successfully!")
             typer.echo("\nRun 'guppi --version' to see the new version")
             
     except subprocess.CalledProcessError as e:
-        typer.echo(f"Error upgrading guppi: {e.stderr}", err=True)
+        typer.echo(f"Error updating guppi: {e.stderr}", err=True)
         raise typer.Exit(1)
     except FileNotFoundError:
         typer.echo("Error: 'uv' command not found. Please install uv first.", err=True)
