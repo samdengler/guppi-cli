@@ -24,7 +24,7 @@ def update(ctx: typer.Context):
         typer.echo("Checking for updates...")
         
         result = subprocess.run(
-            ["uv", "tool", "upgrade", "guppi"],
+            ["uv", "tool", "upgrade", "guppi-cli"],
             check=True,
             capture_output=True,
             text=True
