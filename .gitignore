@@ -26,6 +26,11 @@ venv/
 ENV/
 env/
 
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
 # Beads local-only files (per README)
 .beads/beads.db
 .beads/beads.db-*
