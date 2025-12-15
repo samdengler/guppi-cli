@@ -8,7 +8,7 @@ from pathlib import Path
 import typer
 
 from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools, is_valid_source
-from guppi.templates import load_and_render_template
+from guppi.templates import load_and_render_template, sanitize_tool_name, tool_name_to_package
 
 app = typer.Typer(help="Manage GUPPI tools")
 
@@ -273,6 +273,147 @@ def source_init(
         typer.echo("   Install it with: guppi tool install example --from example-tool/")
 
     typer.echo("\nSee the README.md for more details.")
+
+
+@app.command("init")
+def tool_init(
+    source_directory: str = typer.Argument(..., help="GUPPI source directory where the tool will be created"),
+    tool_name: str = typer.Argument(..., help="Name for the tool"),
+    description: str = typer.Option("A GUPPI tool", "--description", help="Description of the tool"),
+    git: bool = typer.Option(True, "--git/--no-git", help="Initialize as git repository"),
+    template: str = typer.Option("minimal", "--template", help="Template to use: 'minimal' or 'example'"),
+):
+    """
+    Initialize a new GUPPI tool within a source directory.
+
+    Creates a complete tool structure with pyproject.toml, CLI scaffolding,
+    and package structure ready for development and installation.
+
+    Examples:
+        guppi tool init . my-tool                         # Create tool in current source
+        guppi tool init ~/guppi-tools my-awesome-tool     # Create in specific source
+        guppi tool init . demo --template example         # Create with example template
+        guppi tool init . quick-tool --no-git             # Create without git init
+    """
+    # Validate and resolve source directory path
+    source_directory = os.path.expanduser(source_directory)
+    source_directory = os.path.abspath(source_directory)
+    source_path = Path(source_directory)
+
+    # Check source directory exists
+    if not source_path.exists():
+        typer.echo(f"Error: Source directory does not exist: {source_path}", err=True)
+        raise typer.Exit(1)
+
+    # Validate it's a GUPPI source
+    is_valid, source_meta = is_valid_source(source_path)
+    if not is_valid:
+        typer.echo(f"Error: Not a valid GUPPI source: {source_path}", err=True)
+        typer.echo(f"Initialize with: guppi tool source init {source_path}", err=True)
+        raise typer.Exit(1)
+
+    # Sanitize tool name
+    tool_name_sanitized = sanitize_tool_name(tool_name)
+    if not tool_name_sanitized:
+        typer.echo(f"Error: Tool name '{tool_name}' is invalid after sanitization", err=True)
+        raise typer.Exit(1)
+
+    if tool_name != tool_name_sanitized:
+        typer.echo(f"Tool name sanitized: '{tool_name}' → '{tool_name_sanitized}'")
+
+    tool_name = tool_name_sanitized
+    tool_name_underscore = tool_name_to_package(tool_name)
+
+    # Create tool directory
+    tool_dir = source_path / tool_name
+    if tool_dir.exists():
+        typer.echo(f"Error: Tool directory already exists: {tool_dir}", err=True)
+        typer.echo("Remove it first or choose a different name.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Initializing GUPPI tool '{tool_name}'...")
+
+    try:
+        # Create tool directory structure
+        tool_dir.mkdir(parents=True, exist_ok=True)
+        src_dir = tool_dir / "src" / f"guppi_{tool_name_underscore}"
+        src_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create pyproject.toml
+        pyproject_content = load_and_render_template(
+            "tool/pyproject.toml",
+            tool_name=tool_name,
+            tool_name_underscore=tool_name_underscore,
+            description=description
+        )
+        (tool_dir / "pyproject.toml").write_text(pyproject_content)
+
+        # Create README.md
+        readme_content = load_and_render_template(
+            "tool/README.md",
+            tool_name=tool_name,
+            description=description
+        )
+        (tool_dir / "README.md").write_text(readme_content)
+
+        # Create .gitignore
+        gitignore_content = load_and_render_template("tool/gitignore")
+        (tool_dir / ".gitignore").write_text(gitignore_content)
+
+        # Create __init__.py
+        init_content = load_and_render_template(
+            "tool/src/guppi_TOOLNAME/__init__.py",
+            tool_name=tool_name
+        )
+        (src_dir / "__init__.py").write_text(init_content)
+
+        # Create cli.py based on template
+        if template == "example":
+            cli_content = load_and_render_template(
+                "tool-example/cli.py",
+                tool_name=tool_name,
+                tool_name_underscore=tool_name_underscore,
+                description=description
+            )
+        else:
+            cli_content = load_and_render_template(
+                "tool/src/guppi_TOOLNAME/cli.py",
+                tool_name=tool_name,
+                description=description
+            )
+        (src_dir / "cli.py").write_text(cli_content)
+
+        # Git initialization
+        if git:
+            try:
+                subprocess.run(["git", "init"], cwd=tool_dir, check=True, capture_output=True)
+                subprocess.run(["git", "add", "."], cwd=tool_dir, check=True, capture_output=True)
+                subprocess.run(
+                    ["git", "commit", "-m", f"Initialize GUPPI tool {tool_name}"],
+                    cwd=tool_dir,
+                    check=True,
+                    capture_output=True
+                )
+                typer.echo("✓ Initialized git repository")
+            except subprocess.CalledProcessError as e:
+                typer.echo(f"Warning: Git initialization failed: {e}", err=True)
+            except FileNotFoundError:
+                typer.echo("Warning: 'git' command not found, skipping git initialization", err=True)
+
+    except Exception as e:
+        # Clean up on failure
+        if tool_dir.exists():
+            shutil.rmtree(tool_dir)
+        typer.echo(f"Error: Failed to initialize tool: {e}", err=True)
+        raise typer.Exit(1)
+
+    # Display success message
+    typer.echo(f"\n✓ Initialized GUPPI tool '{tool_name}' at {tool_dir}")
+    typer.echo("\nNext steps:")
+    typer.echo(f"  1. Edit src/guppi_{tool_name_underscore}/cli.py to implement your tool")
+    typer.echo(f"  2. Install locally to test: guppi tool install {tool_name} --from {tool_dir}")
+    typer.echo(f"  3. Run your tool: guppi {tool_name} --help")
+    typer.echo("\nSee README.md for development instructions.")
 
 
 @source_app.command("update")
