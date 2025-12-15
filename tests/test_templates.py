@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from guppi.templates import load_template, render_template, load_and_render_template
+from guppi.templates import load_template, render_template, load_and_render_template, sanitize_tool_name, tool_name_to_package
 
 
 class TestLoadTemplate:
@@ -105,3 +105,92 @@ class TestLoadAndRenderTemplate:
         assert "venv/" in result
         # Should work even with no variables provided
         assert "{" not in result  # No unrendered placeholders
+
+
+class TestSanitizeToolName:
+    """Tests for sanitize_tool_name function"""
+
+    def test_sanitize_simple_name(self):
+        """Test sanitizing a simple name"""
+        assert sanitize_tool_name("MyTool") == "mytool"
+        assert sanitize_tool_name("hello") == "hello"
+
+    def test_sanitize_name_with_spaces(self):
+        """Test sanitizing names with spaces"""
+        assert sanitize_tool_name("My Tool") == "my-tool"
+        assert sanitize_tool_name("API Service") == "api-service"
+
+    def test_sanitize_name_with_underscores(self):
+        """Test sanitizing names with underscores"""
+        assert sanitize_tool_name("api_service") == "api-service"
+        assert sanitize_tool_name("my_awesome_tool") == "my-awesome-tool"
+
+    def test_sanitize_name_with_mixed_separators(self):
+        """Test sanitizing names with mixed separators"""
+        assert sanitize_tool_name("Tool-Name_123") == "tool-name-123"
+        assert sanitize_tool_name("my tool_name-here") == "my-tool-name-here"
+
+    def test_sanitize_name_with_special_characters(self):
+        """Test sanitizing names with special characters"""
+        assert sanitize_tool_name("my@tool!") == "my-tool"
+        assert sanitize_tool_name("tool#123$") == "tool-123"
+        assert sanitize_tool_name("api.service") == "api-service"
+
+    def test_sanitize_name_collapses_multiple_hyphens(self):
+        """Test that multiple consecutive hyphens are collapsed"""
+        assert sanitize_tool_name("--Multiple---Hyphens--") == "multiple-hyphens"
+        assert sanitize_tool_name("my----tool") == "my-tool"
+
+    def test_sanitize_name_strips_leading_trailing_hyphens(self):
+        """Test that leading and trailing hyphens are stripped"""
+        assert sanitize_tool_name("-tool-") == "tool"
+        assert sanitize_tool_name("---leading") == "leading"
+        assert sanitize_tool_name("trailing---") == "trailing"
+
+    def test_sanitize_preserves_existing_hyphens(self):
+        """Test that existing hyphens are preserved"""
+        assert sanitize_tool_name("my-tool") == "my-tool"
+        assert sanitize_tool_name("api-service-v2") == "api-service-v2"
+
+    def test_sanitize_preserves_numbers(self):
+        """Test that numbers are preserved"""
+        assert sanitize_tool_name("tool123") == "tool123"
+        assert sanitize_tool_name("v2-api") == "v2-api"
+
+    def test_sanitize_empty_string(self):
+        """Test sanitizing empty string"""
+        assert sanitize_tool_name("") == ""
+        assert sanitize_tool_name("---") == ""
+
+
+class TestToolNameToPackage:
+    """Tests for tool_name_to_package function"""
+
+    def test_convert_simple_name(self):
+        """Test converting simple hyphenated name"""
+        assert tool_name_to_package("my-tool") == "my_tool"
+        assert tool_name_to_package("api-service") == "api_service"
+
+    def test_convert_name_with_multiple_hyphens(self):
+        """Test converting name with multiple hyphens"""
+        assert tool_name_to_package("my-awesome-tool") == "my_awesome_tool"
+        assert tool_name_to_package("api-service-v2") == "api_service_v2"
+
+    def test_convert_name_without_hyphens(self):
+        """Test converting name without hyphens (no change expected)"""
+        assert tool_name_to_package("mytool") == "mytool"
+        assert tool_name_to_package("tool123") == "tool123"
+
+    def test_convert_preserves_numbers(self):
+        """Test that numbers are preserved"""
+        assert tool_name_to_package("tool-123") == "tool_123"
+        assert tool_name_to_package("v2-api") == "v2_api"
+
+    def test_sanitize_and_convert_together(self):
+        """Test sanitize and convert work together correctly"""
+        name = "My Tool Name"
+        sanitized = sanitize_tool_name(name)
+        package = tool_name_to_package(sanitized)
+        assert sanitized == "my-tool-name"
+        assert package == "my_tool_name"
+
