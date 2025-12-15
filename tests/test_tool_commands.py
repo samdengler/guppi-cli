@@ -169,3 +169,179 @@ class TestToolList:
             text=True,
             check=True,
         )
+
+
+class TestSourceUpdate:
+    """Tests for tool source update command"""
+
+    def test_source_update_specific_source_success(self, temp_dir):
+        """Test updating a specific git source"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        source_dir = sources_dir / "test-source"
+        source_dir.mkdir()
+        (source_dir / ".git").mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            with patch("guppi.commands.tool.subprocess.run") as mock_run:
+                mock_run.return_value = SimpleNamespace(
+                    stdout="Updated 5 files",
+                    stderr="",
+                    returncode=0
+                )
+                
+                result = runner.invoke(app, ["source", "update", "test-source"])
+                
+                assert result.exit_code == 0
+                assert "Updating 'test-source'..." in result.output
+                assert "✓ Updated" in result.output
+                mock_run.assert_called_once_with(
+                    ["git", "pull"],
+                    cwd=source_dir,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+
+    def test_source_update_already_up_to_date(self, temp_dir):
+        """Test updating when source is already up to date"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        source_dir = sources_dir / "test-source"
+        source_dir.mkdir()
+        (source_dir / ".git").mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            with patch("guppi.commands.tool.subprocess.run") as mock_run:
+                mock_run.return_value = SimpleNamespace(
+                    stdout="Already up to date",
+                    stderr="",
+                    returncode=0
+                )
+                
+                result = runner.invoke(app, ["source", "update", "test-source"])
+                
+                assert result.exit_code == 0
+                assert "✓ Already up to date" in result.output
+
+    def test_source_update_nonexistent_source(self, temp_dir):
+        """Test updating a source that doesn't exist"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            result = runner.invoke(app, ["source", "update", "nonexistent"])
+            
+            assert result.exit_code == 1
+            assert "Error: Source 'nonexistent' not found" in result.output
+
+    def test_source_update_skips_symlink(self, temp_dir):
+        """Test that update skips symlinked (local) sources"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        # Create actual directory and symlink to it
+        actual_dir = temp_dir / "actual"
+        actual_dir.mkdir()
+        
+        source_link = sources_dir / "local-source"
+        source_link.symlink_to(actual_dir)
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            result = runner.invoke(app, ["source", "update", "local-source"])
+            
+            assert result.exit_code == 0
+            assert "⊘ Skipping 'local-source' (local source)" in result.output
+
+    def test_source_update_skips_non_git(self, temp_dir):
+        """Test that update skips non-git directories"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        source_dir = sources_dir / "non-git"
+        source_dir.mkdir()
+        # Don't create .git directory
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            result = runner.invoke(app, ["source", "update", "non-git"])
+            
+            assert result.exit_code == 0
+            assert "⊘ Skipping 'non-git' (not a git repository)" in result.output
+
+    def test_source_update_all_sources(self, temp_dir):
+        """Test updating all sources"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        # Create multiple sources
+        for name in ["source1", "source2"]:
+            source_dir = sources_dir / name
+            source_dir.mkdir()
+            (source_dir / ".git").mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            with patch("guppi.commands.tool.subprocess.run") as mock_run:
+                mock_run.return_value = SimpleNamespace(
+                    stdout="Updated",
+                    stderr="",
+                    returncode=0
+                )
+                
+                result = runner.invoke(app, ["source", "update"])
+                
+                assert result.exit_code == 0
+                assert "Updating 'source1'..." in result.output
+                assert "Updating 'source2'..." in result.output
+                assert mock_run.call_count == 2
+
+    def test_source_update_git_error(self, temp_dir):
+        """Test handling git pull errors"""
+        import subprocess
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        source_dir = sources_dir / "test-source"
+        source_dir.mkdir()
+        (source_dir / ".git").mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            with patch("guppi.commands.tool.subprocess.run") as mock_run:
+                mock_run.side_effect = subprocess.CalledProcessError(
+                    returncode=1,
+                    cmd=["git", "pull"],
+                    stderr="Network error"
+                )
+                
+                result = runner.invoke(app, ["source", "update", "test-source"])
+                
+                assert result.exit_code == 0  # Command succeeds but reports error
+                assert "✗ Error: Network error" in result.output
+
+    def test_source_update_no_sources(self, temp_dir):
+        """Test updating when no sources exist"""
+        sources_dir = temp_dir / "sources"
+        sources_dir.mkdir()
+        
+        with patch("guppi.commands.tool.get_sources_dir") as mock_get_sources:
+            mock_get_sources.return_value = sources_dir
+            
+            result = runner.invoke(app, ["source", "update"])
+            
+            assert result.exit_code == 0
+            assert "No sources to update" in result.output

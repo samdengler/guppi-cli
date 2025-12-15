@@ -37,6 +37,21 @@ guppi <tool> <command> [args...]
 
 # Example with dummy tool
 guppi dummy hello world
+
+# Update the guppi CLI itself
+guppi update
+
+# Manage tool sources
+guppi tool source add guppi-tools https://github.com/samdengler/guppi-tools
+guppi tool source list
+guppi tool source update                 # Update all sources
+guppi tool source update guppi-tools     # Update specific source
+
+# Discover and install tools from sources
+guppi tool search                        # List all available tools
+guppi tool install <name>                # Install a tool
+guppi tool list                          # List installed tools
+guppi tool uninstall <name>              # Uninstall a tool
 ```
 
 ### How It Works
