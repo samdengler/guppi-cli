@@ -117,6 +117,7 @@ For detailed workflows, see **AGENTS.md**.
 ## Releases
 
 For version releases, follow the procedure in **RELEASE.md**:
+- **Default to minor version releases** unless explicitly specified as major or patch
 - Semantic versioning (major/minor/patch)
 - Update both `pyproject.toml` and `src/guppi/__version__.py`
 - Create git tag and GitHub release with `gh` CLI

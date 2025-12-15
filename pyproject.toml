@@ -1,6 +1,6 @@
 [project]
 name = "guppi-cli"
-version = "0.5.0"
+version = "0.6.0"
 description = "General Use Personal Program Interface - A plugin framework for composing tools"
 readme = "README.md"
 requires-python = ">=3.11"
