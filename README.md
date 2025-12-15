@@ -14,8 +14,15 @@ This is the minimal viable version that proves the plugin architecture works.
 
 ### Installation
 
+**For Users:**
 ```bash
-# Install GUPPI core
+# Install as a global CLI tool
+uv tool install guppi-cli --from git+https://github.com/samdengler/guppi-cli
+```
+
+**For Development:**
+```bash
+# Install in editable mode for local development
 uv pip install -e .
 
 # Or with pip
@@ -56,11 +63,21 @@ This is an ultra-lean MVP. Future iterations will add:
 
 ## Development
 
-```bash
-# Install in development mode
-uv pip install -e .
+### Setup
 
-# Test
+```bash
+# Clone the repository
+git clone https://github.com/samdengler/guppi-cli.git
+cd guppi-cli
+
+# Install in editable mode
+uv pip install -e .
+```
+
+### Testing
+
+```bash
+# Test the CLI
 guppi dummy test
 ```
 

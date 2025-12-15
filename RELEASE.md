@@ -60,10 +60,10 @@ Use the GitHub CLI or API to create the release programmatically.
 Test the release:
 ```bash
 # Upgrade existing installation
-uv tool upgrade guppi
+uv tool upgrade guppi-cli
 
 # Or fresh install
-uv tool install guppi
+uv tool install guppi-cli
 
 # Verify version
 guppi --version

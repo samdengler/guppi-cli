@@ -69,7 +69,7 @@ guppi-tools/
 
 **Install GUPPI:**
 ```bash
-uv tool install guppi --from github.com/user/guppi-cli
+uv tool install guppi-cli --from github.com/user/guppi-cli
 ```
 
 **Install a tool:**
