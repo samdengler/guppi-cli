@@ -637,11 +637,18 @@ def search(
 
 
 @app.command("list")
-def list_tools():
+def list_tools(
+    query: str = typer.Argument(None, help="Search query to filter tools (optional)"),
+):
     """
     List installed GUPPI tools.
     
     Shows all tools that are currently installed and available for routing.
+    Optionally filter by name or description.
+    
+    Examples:
+        guppi tool list              # List all installed tools
+        guppi tool list greeter      # Filter tools matching 'greeter'
     """
     import tomllib
     from guppi.ui import format_tool_list_table
@@ -725,6 +732,18 @@ def list_tools():
                             seen.add(tool_name)
         except PermissionError:
             continue
+    
+    # Filter by query if provided
+    if query:
+        query_lower = query.lower()
+        installed = [
+            t for t in installed
+            if query_lower in t["name"].lower() or query_lower in t["description"].lower()
+        ]
+        
+        if not installed:
+            typer.echo(f"No installed tools found matching '{query}'")
+            return
     
     # Display with rich formatting
     format_tool_list_table(installed)
