@@ -759,3 +759,85 @@ def _install_from_path(name: str, from_path: str):
     except FileNotFoundError:
         typer.echo(f"Error: 'uv' command not found. Please install uv first.", err=True)
         raise typer.Exit(1)
+
+
+@app.command("uninstall")
+def tool_uninstall(
+    name: str = typer.Argument(..., help="Name of the tool to uninstall"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+):
+    """
+    Uninstall a GUPPI tool.
+    
+    Removes a tool that was installed via 'guppi tool install'.
+    Uses 'uv tool uninstall' to remove the tool from the system.
+    
+    Examples:
+        guppi tool uninstall dummy                  # Uninstall with confirmation
+        guppi tool uninstall dummy --yes            # Skip confirmation
+        guppi tool uninstall guppi-dummy            # Works with full name
+    """
+    # Normalize tool name
+    if not name.startswith("guppi-"):
+        full_name = f"guppi-{name}"
+    else:
+        full_name = name
+    
+    # Get list of installed tools
+    try:
+        result = subprocess.run(
+            ["uv", "tool", "list"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except FileNotFoundError:
+        typer.echo("Error: 'uv' command not found. Please install uv first.", err=True)
+        raise typer.Exit(1)
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Error listing installed tools: {e.stderr}", err=True)
+        raise typer.Exit(1)
+    
+    # Parse installed tools
+    installed_tools = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("guppi-"):
+            tool_name = line.split()[0] if line.split() else line
+            installed_tools.append(tool_name)
+    
+    # Validate tool is installed
+    if full_name not in installed_tools:
+        typer.echo(f"Error: Tool '{full_name}' is not installed", err=True)
+        typer.echo("Run 'guppi tool list' to see installed tools")
+        raise typer.Exit(1)
+    
+    # Confirmation prompt (unless --yes)
+    if not yes:
+        typer.echo(f"This will uninstall: {full_name}")
+        confirm = typer.confirm("Are you sure?")
+        if not confirm:
+            typer.echo("Aborted.")
+            raise typer.Exit(0)
+    
+    # Uninstall the tool
+    typer.echo(f"Uninstalling {full_name}...")
+    
+    try:
+        result = subprocess.run(
+            ["uv", "tool", "uninstall", full_name],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        
+        # Display output from uv if any
+        output = result.stdout.strip() + result.stderr.strip()
+        if output:
+            typer.echo(output)
+        
+        typer.echo(f"\n✓ {full_name} uninstalled successfully!")
+        
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Error uninstalling {full_name}: {e.stderr}", err=True)
+        raise typer.Exit(1)
