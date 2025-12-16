@@ -12,11 +12,12 @@ CURRENT_SCHEMA_VERSION = "1.0.0"
 class ToolMetadata:
     """Metadata for a GUPPI tool"""
     
-    def __init__(self, name: str, description: str, path: Path, source: Optional[str] = None):
+    def __init__(self, name: str, description: str, path: Path, source: Optional[str] = None, source_location: Optional[str] = None):
         self.name = name
         self.description = description
         self.path = path
         self.source = source
+        self.source_location = source_location
     
     def __repr__(self):
         return f"ToolMetadata(name={self.name}, source={self.source})"
@@ -104,6 +105,8 @@ def discover_all_tools() -> list[ToolMetadata]:
     Returns:
         List of all discovered tools
     """
+    import subprocess
+    
     sources_dir = get_sources_dir()
     all_tools = []
     
@@ -113,7 +116,31 @@ def discover_all_tools() -> list[ToolMetadata]:
             continue
         
         source_name = source_path.name
+        
+        # Determine source location (git URL or local path)
+        if source_path.is_symlink():
+            source_location = str(source_path.resolve())
+        elif (source_path / ".git").exists():
+            # Try to get git remote URL
+            try:
+                result = subprocess.run(
+                    ["git", "-C", str(source_path), "remote", "get-url", "origin"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                source_location = result.stdout.strip()
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                source_location = str(source_path)
+        else:
+            source_location = str(source_path)
+        
         tools = discover_tools_in_path(source_path, source_name)
+        
+        # Add source_location to each tool
+        for tool in tools:
+            tool.source_location = source_location
+        
         all_tools.extend(tools)
     
     return all_tools

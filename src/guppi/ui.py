@@ -67,11 +67,13 @@ def format_tool_search_table(tools: List) -> None:
     
     table.add_column("Tool", style="green", no_wrap=True)
     table.add_column("Source", style="magenta")
+    table.add_column("Location", style="dim")
     table.add_column("Description", style="white")
     
     for tool in sorted(tools, key=lambda t: t.name):
         source = tool.source or "unknown"
-        table.add_row(tool.name, source, tool.description)
+        location = shorten_path(tool.source_location) if tool.source_location else "unknown"
+        table.add_row(tool.name, source, location, tool.description)
     
     console.print(table)
     console.print(f"\n[dim]Total: {len(tools)} tool(s) found[/dim]")
