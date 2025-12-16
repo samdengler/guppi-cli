@@ -1,11 +1,48 @@
 """Rich UI formatting helpers for GUPPI CLI"""
 
 from typing import List, Dict
+from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
 from rich import box
+
+
+def shorten_path(path: str) -> str:
+    """
+    Shorten a file path for display.
+    
+    - Replaces home directory with ~
+    - Shows relative path if in current directory
+    - Returns full path otherwise
+    
+    Args:
+        path: Full path to shorten
+    
+    Returns:
+        Shortened path string
+    """
+    path_obj = Path(path)
+    home = Path.home()
+    cwd = Path.cwd()
+    
+    # Try home directory replacement
+    try:
+        rel_to_home = path_obj.relative_to(home)
+        return f"~/{rel_to_home}"
+    except ValueError:
+        pass
+    
+    # Try current directory relative
+    try:
+        rel_to_cwd = path_obj.relative_to(cwd)
+        return str(rel_to_cwd)
+    except ValueError:
+        pass
+    
+    # Return full path as fallback
+    return str(path_obj)
 
 
 def format_tool_search_table(tools: List) -> None:
@@ -40,9 +77,9 @@ def format_tool_search_table(tools: List) -> None:
     console.print(f"\n[dim]Total: {len(tools)} tool(s) found[/dim]")
 
 
-def format_tool_list_panel(installed_tools: List[Dict[str, str]]) -> None:
+def format_tool_list_table(installed_tools: List[Dict[str, str]]) -> None:
     """
-    Display installed tools in a styled panel with rounded box.
+    Display installed tools in a formatted table with rounded corners.
     
     Args:
         installed_tools: List of dicts with 'name' and 'path' keys
@@ -54,21 +91,22 @@ def format_tool_list_panel(installed_tools: List[Dict[str, str]]) -> None:
         console.print("\n[dim]Install tools with:[/dim] guppi tool install <name>")
         return
     
-    # Build tool list text
-    tool_text = Text()
-    for tool in sorted(installed_tools, key=lambda x: x["name"]):
-        tool_text.append(f"• {tool['name']}", style="green bold")
-        tool_text.append(f"\n  {tool['path']}\n", style="dim")
-    
-    panel = Panel(
-        tool_text,
+    table = Table(
         title="Installed Tools",
-        border_style="cyan",
         box=box.ROUNDED,
-        padding=(1, 2)
+        show_header=True,
+        header_style="bold cyan"
     )
     
-    console.print(panel)
+    table.add_column("Tool", style="green", no_wrap=True)
+    table.add_column("Location", style="dim")
+    
+    for tool in sorted(installed_tools, key=lambda x: x["name"]):
+        # Shorten path for display
+        path = shorten_path(tool["path"])
+        table.add_row(tool["name"], path)
+    
+    console.print(table)
     console.print(f"\n[dim]Total: {len(installed_tools)} tool(s) installed[/dim]")
 
 

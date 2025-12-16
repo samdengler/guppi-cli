@@ -643,7 +643,7 @@ def list_tools():
     
     Shows all tools that are currently installed and available for routing.
     """
-    from guppi.ui import format_tool_list_panel
+    from guppi.ui import format_tool_list_table
     
     # Look for guppi-* executables in PATH
     installed = []
@@ -680,7 +680,7 @@ def list_tools():
             continue
     
     # Display with rich formatting
-    format_tool_list_panel(installed)
+    format_tool_list_table(installed)
 
 
 @app.command("install")
