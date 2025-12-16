@@ -121,19 +121,25 @@ class TestToolList:
     def test_list_no_installed_tools(self, temp_dir):
         """No executables found should show helpful guidance"""
         with patch("guppi.commands.tool.subprocess.run") as mock_run:
-            mock_run.return_value = SimpleNamespace(
-                stdout=str(temp_dir), stderr="", returncode=0
-            )
-
-            result = runner.invoke(app, ["list"])
+            # Mock both uv tool dir and printenv PATH calls
+            mock_run.side_effect = [
+                SimpleNamespace(stdout=str(temp_dir / "uv_tools"), stderr="", returncode=0),  # uv tool dir
+                SimpleNamespace(stdout=str(temp_dir), stderr="", returncode=0),  # printenv PATH
+            ]
+            
+            with patch("guppi.commands.tool.discover_all_tools", return_value=[]):
+                result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "No tools installed" in result.output
-        mock_run.assert_called_once_with(
-            ["printenv", "PATH"],
-            capture_output=True,
-            text=True,
-            check=True,
+        assert mock_run.call_count == 2
+        assert mock_run.call_args_list[0] == (
+            (["uv", "tool", "dir"],),
+            {"capture_output": True, "text": True, "check": True}
+        )
+        assert mock_run.call_args_list[1] == (
+            (["printenv", "PATH"],),
+            {"capture_output": True, "text": True, "check": True}
         )
 
     def test_list_shows_executables(self, temp_dir):
@@ -153,22 +159,20 @@ class TestToolList:
         non_exec.write_text("echo noexec")
 
         with patch("guppi.commands.tool.subprocess.run") as mock_run:
-            mock_run.return_value = SimpleNamespace(
-                stdout=str(path_dir), stderr="", returncode=0
-            )
-
-            result = runner.invoke(app, ["list"])
+            # Mock both uv tool dir and printenv PATH calls
+            mock_run.side_effect = [
+                SimpleNamespace(stdout=str(temp_dir / "uv_tools"), stderr="", returncode=0),  # uv tool dir
+                SimpleNamespace(stdout=str(path_dir), stderr="", returncode=0),  # printenv PATH
+            ]
+            
+            with patch("guppi.commands.tool.discover_all_tools", return_value=[]):
+                result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "alpha" in result.output
         assert "beta" in result.output
         assert "noexec" not in result.output
-        mock_run.assert_called_once_with(
-            ["printenv", "PATH"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        assert mock_run.call_count == 2
 
 
 class TestSourceUpdate:

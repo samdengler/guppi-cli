@@ -643,7 +643,24 @@ def list_tools():
     
     Shows all tools that are currently installed and available for routing.
     """
+    import tomllib
     from guppi.ui import format_tool_list_table
+    from guppi.discovery import discover_all_tools
+    
+    # Get list of available tools from sources to match metadata
+    available_tools = {tool.name: tool for tool in discover_all_tools()}
+    
+    # Get uv tool directory
+    try:
+        tool_dir_result = subprocess.run(
+            ["uv", "tool", "dir"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        uv_tool_dir = Path(tool_dir_result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        uv_tool_dir = None
     
     # Look for guppi-* executables in PATH
     installed = []
@@ -671,9 +688,39 @@ def list_tools():
                     if item.stat().st_mode & 0o111:  # Has execute permission
                         tool_name = item.name.replace("guppi-", "")
                         if tool_name not in seen:
+                            # Try to get metadata from available tools
+                            source = None
+                            description = None
+                            if tool_name in available_tools:
+                                source = available_tools[tool_name].source
+                                description = available_tools[tool_name].description
+                            
+                            # Try to get source from uv receipt if not in available tools
+                            if not source and uv_tool_dir:
+                                receipt_path = uv_tool_dir / item.name / "uv-receipt.toml"
+                                if receipt_path.exists():
+                                    try:
+                                        with open(receipt_path, "rb") as f:
+                                            receipt = tomllib.load(f)
+                                        # Check if it's editable install
+                                        requirements = receipt.get("tool", {}).get("requirements", [])
+                                        for req in requirements:
+                                            if req.get("editable"):
+                                                editable_path = Path(req["editable"])
+                                                # Check if it's in a known source
+                                                for name, tool in available_tools.items():
+                                                    if tool.path.resolve() == editable_path.resolve():
+                                                        source = tool.source
+                                                        description = tool.description
+                                                        break
+                                    except Exception:
+                                        pass
+                            
                             installed.append({
                                 "name": tool_name,
-                                "path": str(item)
+                                "path": str(item),
+                                "source": source or "unknown",
+                                "description": description or "No description available"
                             })
                             seen.add(tool_name)
         except PermissionError:

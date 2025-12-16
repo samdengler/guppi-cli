@@ -84,7 +84,7 @@ def format_tool_list_table(installed_tools: List[Dict[str, str]]) -> None:
     Display installed tools in a formatted table with rounded corners.
     
     Args:
-        installed_tools: List of dicts with 'name' and 'path' keys
+        installed_tools: List of dicts with 'name', 'path', 'source', and 'description' keys
     """
     console = Console()
     
@@ -101,12 +101,16 @@ def format_tool_list_table(installed_tools: List[Dict[str, str]]) -> None:
     )
     
     table.add_column("Tool", style="green", no_wrap=True)
+    table.add_column("Source", style="magenta")
+    table.add_column("Description", style="white")
     table.add_column("Location", style="dim")
     
     for tool in sorted(installed_tools, key=lambda x: x["name"]):
         # Shorten path for display
         path = shorten_path(tool["path"])
-        table.add_row(tool["name"], path)
+        source = tool.get("source", "unknown")
+        description = tool.get("description", "No description available")
+        table.add_row(tool["name"], source, description, path)
     
     console.print(table)
     console.print(f"\n[dim]Total: {len(installed_tools)} tool(s) installed[/dim]")
