@@ -129,7 +129,7 @@ def source_list():
     max_name = max(len(s["name"]) for s in sources)
     max_type = max(len(s["type"]) for s in sources)
     
-    typer.echo(f"{'NAME':<{max_name}}  {'TYPE':<{max_type}}  LOCATION")
+    typer.echo(f"{'Name':<{max_name}}  {'Type':<{max_type}}  Location")
     typer.echo("-" * (max_name + max_type + 60))
     
     for source in sources:
