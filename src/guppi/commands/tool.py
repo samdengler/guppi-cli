@@ -21,6 +21,7 @@ app.add_typer(source_app, name="source")
 def source_add(
     name: str = typer.Argument(..., help="Name for this source"),
     url: str = typer.Argument(..., help="Git URL or local path"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ):
     """
     Add a tool source.
@@ -28,13 +29,30 @@ def source_add(
     Examples:
         guppi tool source add guppi-tools https://github.com/samdengler/guppi-tools
         guppi tool source add local-tools /path/to/local/tools
+        guppi tool source add guppi-tools <url> --yes  # Overwrite without prompting
     """
     sources_dir = get_sources_dir()
     dest_path = sources_dir / name
     
     if dest_path.exists():
-        typer.echo(f"Error: Source '{name}' already exists at {dest_path}", err=True)
-        raise typer.Exit(1)
+        # Confirmation prompt (unless --yes)
+        if not yes:
+            typer.echo(f"Source '{name}' already exists at {dest_path}")
+            confirm = typer.confirm("Do you want to replace it?")
+            if not confirm:
+                typer.echo("Aborted.")
+                raise typer.Exit(0)
+        
+        # Remove existing source
+        try:
+            if dest_path.is_symlink():
+                dest_path.unlink()
+            else:
+                shutil.rmtree(dest_path)
+            typer.echo(f"Removed existing source '{name}'")
+        except Exception as e:
+            typer.echo(f"Error removing existing source: {e}", err=True)
+            raise typer.Exit(1)
     
     typer.echo(f"Adding source '{name}' from {url}...")
     
@@ -754,6 +772,7 @@ def install(
     name: str = typer.Argument(..., help="Name of the tool to install"),
     from_path: str = typer.Option(None, "--from", help="GitHub repo or local path (optional if tool is in sources)"),
     source: str = typer.Option(None, "--source", help="Source name to install from (required if tool exists in multiple sources)"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
 ):
     """
     Install a GUPPI tool.
@@ -762,10 +781,11 @@ def install(
         guppi tool install dummy                      # Install from sources
         guppi tool install dummy --source guppi-tools # Install from specific source
         guppi tool install dummy --from ~/dev/dummy   # Install from local path
+        guppi tool install dummy --yes                # Reinstall without prompting
     """
     # If --from is provided, use it directly
     if from_path:
-        _install_from_path(name, from_path)
+        _install_from_path(name, from_path, yes)
         return
     
     # Otherwise, look up tool in sources
@@ -800,11 +820,41 @@ def install(
         raise typer.Exit(1)
     
     typer.echo(f"Found '{name}' in source '{tool.source}'")
-    _install_from_path(name, str(tool.path))
+    _install_from_path(name, str(tool.path), yes)
 
 
-def _install_from_path(name: str, from_path: str):
+def _install_from_path(name: str, from_path: str, yes: bool = False):
     """Helper to install a tool from a given path"""
+    # Normalize tool name
+    if not name.startswith("guppi-"):
+        full_name = f"guppi-{name}"
+    else:
+        full_name = name
+    
+    # Check if tool is already installed
+    try:
+        result = subprocess.run(
+            ["uv", "tool", "list"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        installed_tools = [line.split()[0] for line in result.stdout.strip().split("\n") if line and not line.startswith(" ") and not line.startswith("-")]
+        
+        is_installed = full_name in installed_tools
+        
+        if is_installed:
+            # Confirmation prompt (unless --yes)
+            if not yes:
+                typer.echo(f"Tool '{full_name}' is already installed")
+                confirm = typer.confirm("Do you want to reinstall it?")
+                if not confirm:
+                    typer.echo("Aborted.")
+                    raise typer.Exit(0)
+    except subprocess.CalledProcessError:
+        # If uv tool list fails, continue with installation
+        pass
+    
     typer.echo(f"Installing tool '{name}' from {from_path}...")
     
     # Determine if it's a local path or remote repo

@@ -22,34 +22,40 @@ class TestToolInstall:
         tool_dir.mkdir()
 
         with patch("guppi.commands.tool.subprocess.run") as mock_run:
-            mock_run.return_value = SimpleNamespace(stdout="installed", stderr="", returncode=0)
+            # First call is uv tool list (returns empty)
+            # Second call is uv tool install
+            mock_run.side_effect = [
+                SimpleNamespace(stdout="", stderr="", returncode=0),  # uv tool list
+                SimpleNamespace(stdout="installed", stderr="", returncode=0),  # uv tool install
+            ]
 
             result = runner.invoke(app, ["install", "mytool", "--from", str(tool_dir)])
 
             assert result.exit_code == 0
             assert "Tool 'mytool' installed successfully" in result.output
-            mock_run.assert_called_once_with(
-                ["uv", "tool", "install", "--editable", str(tool_dir)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            assert mock_run.call_count == 2
+            # Check first call was uv tool list
+            assert mock_run.call_args_list[0][0][0] == ["uv", "tool", "list"]
+            # Check second call was uv tool install with editable
+            assert mock_run.call_args_list[1][0][0] == ["uv", "tool", "install", "--editable", str(tool_dir)]
 
     def test_install_from_remote_path_uses_git_plus(self):
         """Installing from non-existent path should use git+ syntax"""
         remote = "github.com/example/repo"
         with patch("guppi.commands.tool.subprocess.run") as mock_run:
-            mock_run.return_value = SimpleNamespace(stdout="installed", stderr="", returncode=0)
+            # First call is uv tool list (returns empty)
+            # Second call is uv tool install
+            mock_run.side_effect = [
+                SimpleNamespace(stdout="", stderr="", returncode=0),  # uv tool list
+                SimpleNamespace(stdout="installed", stderr="", returncode=0),  # uv tool install
+            ]
 
             result = runner.invoke(app, ["install", "example", "--from", remote])
 
             assert result.exit_code == 0
-            mock_run.assert_called_once_with(
-                ["uv", "tool", "install", f"git+{remote}"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            assert mock_run.call_count == 2
+            # Check second call was uv tool install with git+
+            assert mock_run.call_args_list[1][0][0] == ["uv", "tool", "install", f"git+{remote}"]
 
     def test_install_requires_source_when_ambiguous(self):
         """If a tool exists in multiple sources, require --source"""
@@ -76,7 +82,7 @@ class TestToolInstall:
             result = runner.invoke(app, ["install", "demo", "--source", "alpha"])
 
         assert result.exit_code == 0
-        mock_install.assert_called_once_with("demo", str(tool.path))
+        mock_install.assert_called_once_with("demo", str(tool.path), False)
 
     def test_install_not_found_in_sources(self):
         """Installing without matches should show helpful error"""
