@@ -59,24 +59,28 @@ def format_tool_search_table(tools: List) -> None:
         return
     
     table = Table(
-        title="Available Tools",
+        title="[bold cyan]Available Tools[/bold cyan]",
         box=box.ROUNDED,
         show_header=True,
-        header_style="bold cyan"
+        header_style="bold cyan",
+        border_style="cyan",
+        title_style="bold cyan"
     )
     
-    table.add_column("Tool", style="green", no_wrap=True)
-    table.add_column("Source", style="magenta")
-    table.add_column("Location", style="dim")
-    table.add_column("Description", style="white")
+    # Consistent column styling
+    table.add_column("Tool", style="bold green", no_wrap=True, width=20)
+    table.add_column("Source", style="blue", width=15)
+    table.add_column("Description", overflow="fold")
+    table.add_column("Location", style="dim", width=30)
     
     for tool in sorted(tools, key=lambda t: t.name):
-        source = tool.source or "unknown"
-        location = shorten_path(tool.source_location) if tool.source_location else "unknown"
-        table.add_row(tool.name, source, location, tool.description)
+        source = tool.source or "[dim]unknown[/dim]"
+        location = shorten_path(tool.source_location) if tool.source_location else "[dim]unknown[/dim]"
+        description = tool.description or "[dim]No description[/dim]"
+        table.add_row(tool.name, source, description, location)
     
     console.print(table)
-    console.print(f"\n[dim]Total: {len(tools)} tool(s) found[/dim]")
+    console.print(f"\n[dim cyan]Total: {len(tools)} tool(s) found[/dim cyan]")
 
 
 def format_tool_list_table(installed_tools: List[Dict[str, str]]) -> None:
@@ -90,30 +94,38 @@ def format_tool_list_table(installed_tools: List[Dict[str, str]]) -> None:
     
     if not installed_tools:
         console.print("[yellow]No tools installed[/yellow]")
-        console.print("\n[dim]Install tools with:[/dim] guppi tool install <name>")
+        console.print("\n[dim]Install tools with:[/dim] [cyan]guppi tool install <name>[/cyan]")
         return
     
     table = Table(
-        title="Installed Tools",
+        title="[bold green]Installed Tools[/bold green]",
         box=box.ROUNDED,
         show_header=True,
-        header_style="bold cyan"
+        header_style="bold cyan",
+        border_style="green",
+        title_style="bold green"
     )
     
-    table.add_column("Tool", style="green", no_wrap=True)
-    table.add_column("Source", style="magenta")
-    table.add_column("Description", style="white")
-    table.add_column("Location", style="dim")
+    # Consistent column styling - matches search table order
+    table.add_column("Tool", style="bold green", no_wrap=True, width=20)
+    table.add_column("Source", style="blue", width=15)
+    table.add_column("Description", overflow="fold")
+    table.add_column("Location", style="dim", width=30)
     
     for tool in sorted(installed_tools, key=lambda x: x["name"]):
         # Shorten path for display
         path = shorten_path(tool["path"])
         source = tool.get("source", "unknown")
+        # Mark unknown sources with dim styling
+        if source == "unknown":
+            source = "[dim]unknown[/dim]"
         description = tool.get("description", "No description available")
+        if description == "No description available":
+            description = "[dim]No description available[/dim]"
         table.add_row(tool["name"], source, description, path)
     
     console.print(table)
-    console.print(f"\n[dim]Total: {len(installed_tools)} tool(s) installed[/dim]")
+    console.print(f"\n[dim green]Total: {len(installed_tools)} tool(s) installed[/dim green]")
 
 
 def show_welcome_panel() -> None:
