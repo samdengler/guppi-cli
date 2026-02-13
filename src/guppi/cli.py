@@ -3,7 +3,7 @@
 import sys
 import typer
 
-from guppi.commands import tool, skill, update, uninstall
+from guppi.commands import tool, skill, init, update, uninstall
 from guppi.router import route_to_tool
 from guppi.__version__ import __version__
 
@@ -25,6 +25,7 @@ app = typer.Typer(
 # Register subcommands
 app.add_typer(tool.app, name="tool")
 app.add_typer(skill.app, name="skill")
+app.add_typer(init.app, name="init")
 app.add_typer(update.app, name="update")
 app.add_typer(uninstall.app, name="uninstall")
 
@@ -60,7 +61,7 @@ def main_entry():
             return
         
         # If it's a flag (starts with -) or a known subcommand, let Typer handle it
-        if first_arg.startswith("-") or first_arg in ["tool", "skill", "update", "uninstall"]:
+        if first_arg.startswith("-") or first_arg in ["tool", "skill", "init", "update", "uninstall"]:
             app()
             return
         
