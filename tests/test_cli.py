@@ -44,7 +44,7 @@ class TestMainApp:
         # Typer with no_args_is_help=True exits with code 0 when invoked
         # but the CLI runner may return different codes
         assert "GUPPI - General Use Personal Program Interface" in result.output
-        assert "tool" in result.output
+        assert "skill" in result.output
         assert "update" in result.output
 
     def test_app_help_flag(self):
@@ -64,12 +64,6 @@ class TestMainApp:
         result = runner.invoke(app, ["-v"])
         assert result.exit_code == 0
         assert f"guppi version {__version__}" in result.output
-
-    def test_app_has_tool_subcommand(self):
-        """Test that 'tool' subcommand is available"""
-        result = runner.invoke(app, ["tool", "--help"])
-        assert result.exit_code == 0
-        assert "Manage GUPPI tools" in result.output
 
     def test_app_has_upgrade_subcommand(self):
         """Test that 'update' subcommand is available"""
@@ -102,9 +96,9 @@ class TestMainEntry:
                 main_entry()
                 mock_app.assert_called_once()
 
-    def test_main_entry_with_tool_subcommand(self):
-        """Test main_entry with 'tool' subcommand calls app"""
-        with patch("sys.argv", ["guppi", "tool", "list"]):
+    def test_main_entry_with_skill_subcommand(self):
+        """Test main_entry with 'skill' subcommand calls app"""
+        with patch("sys.argv", ["guppi", "skill", "list"]):
             with patch("guppi.cli.app") as mock_app:
                 main_entry()
                 mock_app.assert_called_once()
@@ -154,9 +148,9 @@ class TestMainEntry:
                 mock_app.assert_called_once()
 
     def test_main_entry_distinguishes_subcommand_from_tool(self):
-        """Test that 'tool' and 'update' are treated as subcommands, not tools"""
-        # Test 'tool' subcommand
-        with patch("sys.argv", ["guppi", "tool", "list"]):
+        """Test that 'skill' and 'update' are treated as subcommands, not tools"""
+        # Test 'skill' subcommand
+        with patch("sys.argv", ["guppi", "skill", "list"]):
             with patch("guppi.cli.app") as mock_app:
                 with patch("guppi.cli.route_to_tool") as mock_route:
                     main_entry()
