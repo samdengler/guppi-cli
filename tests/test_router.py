@@ -9,7 +9,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_success(self):
         """Test routing to a tool that exists and succeeds"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -21,7 +22,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_with_failure_exit_code(self):
         """Test routing to a tool that runs but returns non-zero exit code"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 42
             mock_run.return_value = mock_result
@@ -31,25 +33,47 @@ class TestRouteToTool:
             assert exit_code == 42
             mock_run.assert_called_once_with(["guppi-failing-tool", "--fail"])
 
-    def test_route_to_tool_not_found(self):
-        """Test routing to a tool that doesn't exist"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+    def test_route_to_tool_not_found_not_in_sources(self):
+        """Test routing to a tool that doesn't exist and isn't in sources"""
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run, \
+             patch("guppi.router.typer.echo") as mock_echo:
             mock_run.side_effect = FileNotFoundError()
 
-            with patch("guppi.router.typer.echo") as mock_echo:
-                exit_code = route_to_tool("nonexistent", [])
+            exit_code = route_to_tool("nonexistent", [])
 
-                assert exit_code == 1
-                # Verify error messages were displayed
-                assert mock_echo.call_count == 2
-                # First call should be error about tool not found
-                assert "Tool 'nonexistent' not found" in mock_echo.call_args_list[0][0][0]
-                # Second call should be install suggestion
-                assert "guppi tool install nonexistent" in mock_echo.call_args_list[1][0][0]
+            assert exit_code == 1
+            assert mock_echo.call_count == 2
+            assert "Skill 'nonexistent' not found" in mock_echo.call_args_list[0][0][0]
+            assert "guppi skill search" in mock_echo.call_args_list[1][0][0]
+
+    def test_route_to_tool_found_in_sources_but_not_installed(self):
+        """Test routing to a tool that exists in sources but isn't installed"""
+        from guppi.discovery import ToolMetadata
+        from pathlib import Path
+
+        mock_meta = ToolMetadata(
+            name="cool-skill",
+            description="A cool skill",
+            path=Path("/fake"),
+            source="my-source",
+        )
+        with patch("guppi.router.find_tool", return_value=mock_meta), \
+             patch("guppi.router.subprocess.run") as mock_run, \
+             patch("guppi.router.typer.echo") as mock_echo:
+            mock_run.side_effect = FileNotFoundError()
+
+            exit_code = route_to_tool("cool-skill", [])
+
+            assert exit_code == 1
+            assert mock_echo.call_count == 2
+            assert "found in source 'my-source'" in mock_echo.call_args_list[0][0][0]
+            assert "guppi skill install cool-skill" in mock_echo.call_args_list[1][0][0]
 
     def test_route_to_tool_with_no_args(self):
         """Test routing to a tool with no arguments"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -61,7 +85,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_with_many_args(self):
         """Test routing to a tool with many arguments"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -76,7 +101,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_constructs_correct_command_name(self):
         """Test that tool name is correctly prefixed with 'guppi-'"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -89,7 +115,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_preserves_arg_order(self):
         """Test that arguments are passed in the correct order"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -102,7 +129,8 @@ class TestRouteToTool:
 
     def test_route_to_tool_with_special_characters_in_args(self):
         """Test routing with arguments containing special characters"""
-        with patch("guppi.router.subprocess.run") as mock_run:
+        with patch("guppi.router.find_tool", return_value=None), \
+             patch("guppi.router.subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_run.return_value = mock_result
@@ -119,7 +147,8 @@ class TestRouteToTool:
         test_codes = [0, 1, 2, 127, 255]
 
         for expected_code in test_codes:
-            with patch("guppi.router.subprocess.run") as mock_run:
+            with patch("guppi.router.find_tool", return_value=None), \
+                 patch("guppi.router.subprocess.run") as mock_run:
                 mock_result = MagicMock()
                 mock_result.returncode = expected_code
                 mock_run.return_value = mock_result
