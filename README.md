@@ -41,12 +41,13 @@ guppi dummy hello world
 # Update the guppi CLI itself
 guppi update
 
-# Manage tool sources
-guppi tool source add guppi-tools https://github.com/samdengler/guppi-tools
-guppi tool source list
-guppi tool source init <directory>       # Initialize a new tool source
-guppi tool source update                 # Update all sources
-guppi tool source update guppi-tools     # Update specific source
+# Manage skill sources
+guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills
+guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev  # Specific branch
+guppi skill source list
+guppi skill source init <directory>       # Initialize a new skill source
+guppi skill source update                 # Update all sources
+guppi skill source update guppi-skills    # Update specific source
 
 # Create new tools
 guppi tool init <source-dir> <tool-name>                    # Create a new tool

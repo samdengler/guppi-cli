@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from giturlparse import parse as parse_git_url
 
 from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools, is_valid_source
 from guppi.templates import load_and_render_template, sanitize_tool_name, tool_name_to_package
@@ -80,8 +81,12 @@ def source_add(
     """
     Add a skill source.
 
+    Supports GitHub browser URLs with branches:
+        https://github.com/owner/repo/tree/my-branch
+
     Examples:
         guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills
+        guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev
         guppi skill source add local-skills /path/to/local/skills
         guppi skill source add guppi-skills <url> --yes  # Overwrite without prompting
     """
@@ -118,11 +123,21 @@ def source_add(
             raise typer.Exit(1)
     else:
         try:
-            subprocess.run(
-                ["git", "clone", url, str(dest_path)],
-                check=True, capture_output=True, text=True,
-            )
-            typer.echo(f"✓ Cloned source '{name}' to {dest_path}")
+            parsed = parse_git_url(url)
+            branch = parsed.branch if parsed.valid else None
+            clone_url = url.split("/tree/")[0] if branch else url
+
+            cmd = ["git", "clone"]
+            if branch:
+                cmd += ["--branch", branch]
+            cmd += [clone_url, str(dest_path)]
+
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+            msg = f"✓ Cloned source '{name}' to {dest_path}"
+            if branch:
+                msg += f" (branch: {branch})"
+            typer.echo(msg)
         except subprocess.CalledProcessError as e:
             typer.echo(f"Error cloning repository: {e.stderr}", err=True)
             raise typer.Exit(1)
@@ -156,6 +171,7 @@ def source_list():
             source_type = "local"
             target = source_path.resolve()
             location = str(target)
+            branch = None
         elif (source_path / ".git").exists():
             source_type = "git"
             try:
@@ -166,14 +182,24 @@ def source_list():
                 location = result.stdout.strip()
             except subprocess.CalledProcessError:
                 location = str(source_path)
+            try:
+                result = subprocess.run(
+                    ["git", "-C", str(source_path), "rev-parse", "--abbrev-ref", "HEAD"],
+                    capture_output=True, text=True, check=True,
+                )
+                branch = result.stdout.strip()
+            except subprocess.CalledProcessError:
+                branch = None
         else:
             source_type = "unknown"
             location = str(source_path)
+            branch = None
 
         sources.append({
             "name": name,
             "type": source_type,
             "location": location,
+            "branch": branch,
         })
 
     if not sources:
@@ -186,12 +212,15 @@ def source_list():
     typer.echo("Skill sources:\n")
     max_name = max(len(s["name"]) for s in sources)
     max_type = max(len(s["type"]) for s in sources)
+    max_branch = max((len(s["branch"] or "") for s in sources), default=0)
+    max_branch = max(max_branch, len("Branch"))
 
-    typer.echo(f"{'Name':<{max_name}}  {'Type':<{max_type}}  Location")
-    typer.echo("-" * (max_name + max_type + 60))
+    typer.echo(f"{'Name':<{max_name}}  {'Type':<{max_type}}  {'Branch':<{max_branch}}  Location")
+    typer.echo("-" * (max_name + max_type + max_branch + 60))
 
     for source in sources:
-        typer.echo(f"{source['name']:<{max_name}}  {source['type']:<{max_type}}  {source['location']}")
+        branch_display = source["branch"] or "-"
+        typer.echo(f"{source['name']:<{max_name}}  {source['type']:<{max_type}}  {branch_display:<{max_branch}}  {source['location']}")
 
     typer.echo(f"\nTotal: {len(sources)} source(s) configured")
 
