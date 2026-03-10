@@ -31,4 +31,4 @@ def init():
 
     typer.echo(f"✓ Registered GUPPI for Claude Code at {dest}")
     typer.echo("\nClaude will now search for available skills before building from scratch.")
-    typer.echo("Manage skills with: guppi skill --help")
+    typer.echo("Manage skills with: guppi skills --help")

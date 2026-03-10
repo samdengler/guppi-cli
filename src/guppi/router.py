@@ -32,8 +32,8 @@ def route_to_tool(tool: str, tool_args: list[str]) -> int:
                 f"Error: Skill '{tool}' found in source '{metadata.source}' but not installed",
                 err=True,
             )
-            typer.echo(f"Install with: guppi skill install {tool}", err=True)
+            typer.echo(f"Install with: guppi skills install {tool}", err=True)
         else:
             typer.echo(f"Error: Skill '{tool}' not found", err=True)
-            typer.echo("Search available skills with: guppi skill search", err=True)
+            typer.echo("Search available skills with: guppi skills search", err=True)
         return 1

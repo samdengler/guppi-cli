@@ -23,7 +23,7 @@ app = typer.Typer(
 )
 
 # Register subcommands
-app.add_typer(skill.app, name="skill")
+app.add_typer(skill.app, name="skills")
 app.add_typer(init.app, name="init")
 app.add_typer(update.app, name="update")
 app.add_typer(uninstall.app, name="uninstall")
@@ -51,7 +51,7 @@ def main_entry():
     # Check if we have args
     if len(sys.argv) > 1:
         first_arg = sys.argv[1]
-        
+
         # If it's --help, show welcome panel first
         if first_arg in ["--help", "-h", "help"]:
             from guppi.ui import show_welcome_panel
@@ -60,7 +60,7 @@ def main_entry():
             return
         
         # If it's a flag (starts with -) or a known subcommand, let Typer handle it
-        if first_arg.startswith("-") or first_arg in ["skill", "init", "update", "uninstall"]:
+        if first_arg.startswith("-") or first_arg in ["skills", "init", "update", "uninstall"]:
             app()
             return
         

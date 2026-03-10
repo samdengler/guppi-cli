@@ -42,12 +42,12 @@ guppi dummy hello world
 guppi update
 
 # Manage skill sources
-guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills
-guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev  # Specific branch
-guppi skill source list
-guppi skill source init <directory>       # Initialize a new skill source
-guppi skill source update                 # Update all sources
-guppi skill source update guppi-skills    # Update specific source
+guppi skills source add guppi-skills https://github.com/samdengler/guppi-skills
+guppi skills source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev  # Specific branch
+guppi skills source list
+guppi skills source init <directory>       # Initialize a new skill source
+guppi skills source update                 # Update all sources
+guppi skills source update guppi-skills    # Update specific source
 
 # Create new tools
 guppi tool init <source-dir> <tool-name>                    # Create a new tool

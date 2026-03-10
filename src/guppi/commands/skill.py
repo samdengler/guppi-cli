@@ -85,10 +85,10 @@ def source_add(
         https://github.com/owner/repo/tree/my-branch
 
     Examples:
-        guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills
-        guppi skill source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev
-        guppi skill source add local-skills /path/to/local/skills
-        guppi skill source add guppi-skills <url> --yes  # Overwrite without prompting
+        guppi skills source add guppi-skills https://github.com/samdengler/guppi-skills
+        guppi skills source add guppi-skills https://github.com/samdengler/guppi-skills/tree/dev
+        guppi skills source add local-skills /path/to/local/skills
+        guppi skills source add guppi-skills <url> --yes  # Overwrite without prompting
     """
     sources_dir = get_sources_dir()
     dest_path = sources_dir / name
@@ -147,7 +147,9 @@ def source_add(
 
 
 @source_app.command("list")
-def source_list():
+def source_list(
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
     """
     List all skill sources.
 
@@ -157,7 +159,7 @@ def source_list():
 
     if not sources_dir.exists():
         typer.echo("No sources configured")
-        typer.echo("\nAdd sources with: guppi skill source add <name> <url>")
+        typer.echo("\nAdd sources with: guppi skills source add <name> <url>")
         return
 
     sources = []
@@ -204,10 +206,17 @@ def source_list():
 
     if not sources:
         typer.echo("No sources configured")
-        typer.echo("\nAdd sources with: guppi skill source add <name> <url>")
+        typer.echo("\nAdd sources with: guppi skills source add <name> <url>")
         return
 
     sources.sort(key=lambda x: x["name"])
+
+    if json_output:
+        import json
+        for source in sources:
+            source["local_path"] = str((sources_dir / source["name"]).resolve())
+        typer.echo(json.dumps(sources, indent=2))
+        return
 
     typer.echo("Skill sources:\n")
     max_name = max(len(s["name"]) for s in sources)
@@ -239,9 +248,9 @@ def source_init(
     with [tool.guppi.source] metadata, README.md, and .gitignore.
 
     Examples:
-        guppi skill source init                          # Init current directory
-        guppi skill source init ~/my-skills              # Init specific directory
-        guppi skill source init . --name my-skills       # Init with custom name
+        guppi skills source init                          # Init current directory
+        guppi skills source init ~/my-skills              # Init specific directory
+        guppi skills source init . --name my-skills       # Init with custom name
     """
     directory = os.path.expanduser(directory)
     directory = os.path.abspath(directory)
@@ -311,7 +320,7 @@ def source_init(
     typer.echo("\nNext steps:")
     typer.echo("  1. Add skills to this source (each skill in its own directory)")
     typer.echo("  2. Each skill needs a pyproject.toml with [tool.guppi] metadata")
-    typer.echo(f"  3. Add this source to GUPPI: guppi skill source add {name} {target_path}")
+    typer.echo(f"  3. Add this source to GUPPI: guppi skills source add {name} {target_path}")
     typer.echo("\nSee the README.md for more details.")
 
 
@@ -326,8 +335,8 @@ def source_update(
     If no name is provided, updates all sources.
 
     Examples:
-        guppi skill source update                # Update all sources
-        guppi skill source update guppi-skills   # Update specific source
+        guppi skills source update                # Update all sources
+        guppi skills source update guppi-skills   # Update specific source
     """
     sources_dir = get_sources_dir()
 
@@ -389,12 +398,12 @@ def skill_update(
     """
     Update installed GUPPI skills.
 
-    Updates skills that were installed via 'guppi skill install'.
+    Updates skills that were installed via 'guppi skills install'.
     Uses 'uv tool upgrade' to update to the latest version.
 
     Examples:
-        guppi skill update              # Update all installed guppi-* skills
-        guppi skill update spiker       # Update specific skill
+        guppi skills update              # Update all installed guppi-* skills
+        guppi skills update spiker       # Update specific skill
     """
     try:
         result = subprocess.run(
@@ -417,7 +426,7 @@ def skill_update(
 
     if not installed_skills:
         typer.echo("No GUPPI skills installed")
-        typer.echo("Install skills with: guppi skill install <name>")
+        typer.echo("Install skills with: guppi skills install <name>")
         return
 
     if name:
@@ -466,8 +475,8 @@ def search(
     Search for available skills in all sources.
 
     Examples:
-        guppi skill search          # List all available skills
-        guppi skill search spiker   # Search for skills matching 'spiker'
+        guppi skills search          # List all available skills
+        guppi skills search spiker   # Search for skills matching 'spiker'
     """
     from guppi.ui import format_tool_search_table
 
@@ -475,7 +484,7 @@ def search(
 
     if not tools:
         typer.echo("No skills found in sources")
-        typer.echo("Add a source with: guppi skill source add <name> <url>")
+        typer.echo("Add a source with: guppi skills source add <name> <url>")
         return
 
     if query:
@@ -502,8 +511,8 @@ def list_skills(
     Optionally filter by name or description.
 
     Examples:
-        guppi skill list              # List all installed skills
-        guppi skill list spiker       # Filter skills matching 'spiker'
+        guppi skills list              # List all installed skills
+        guppi skills list spiker       # Filter skills matching 'spiker'
     """
     import tomllib
     from guppi.ui import format_tool_list_table
@@ -600,10 +609,10 @@ def install(
     Installs the CLI tool via uv and registers SKILL.md for Claude Code discovery.
 
     Examples:
-        guppi skill install spiker                        # Install from sources
-        guppi skill install spiker --source guppi-skills  # Install from specific source
-        guppi skill install spiker --from ~/dev/spiker    # Install from local path
-        guppi skill install spiker --yes                  # Reinstall without prompting
+        guppi skills install spiker                        # Install from sources
+        guppi skills install spiker --source guppi-skills  # Install from specific source
+        guppi skills install spiker --from ~/dev/spiker    # Install from local path
+        guppi skills install spiker --yes                  # Reinstall without prompting
     """
     if from_path:
         _install_from_path(name, from_path, yes)
@@ -615,8 +624,8 @@ def install(
 
     if not all_matches:
         typer.echo(f"Error: Skill '{name}' not found in any source", err=True)
-        typer.echo("Try: guppi skill search", err=True)
-        typer.echo(f"Or: guppi skill install {name} --from <path>", err=True)
+        typer.echo("Try: guppi skills search", err=True)
+        typer.echo(f"Or: guppi skills install {name} --from <path>", err=True)
         raise typer.Exit(1)
 
     if len(all_matches) > 1 and not source:
@@ -624,7 +633,7 @@ def install(
         for match in all_matches:
             typer.echo(f"  - {match.source}", err=True)
         typer.echo(f"\nPlease specify a source:", err=True)
-        typer.echo(f"  guppi skill install {name} --source <source-name>", err=True)
+        typer.echo(f"  guppi skills install {name} --source <source-name>", err=True)
         raise typer.Exit(1)
 
     tool = find_tool(name, source)
@@ -701,9 +710,9 @@ def skill_uninstall(
     Removes the CLI tool via uv and unregisters from Claude Code discovery.
 
     Examples:
-        guppi skill uninstall spiker              # Uninstall with confirmation
-        guppi skill uninstall spiker --yes        # Skip confirmation
-        guppi skill uninstall guppi-spiker        # Works with full name
+        guppi skills uninstall spiker              # Uninstall with confirmation
+        guppi skills uninstall spiker --yes        # Skip confirmation
+        guppi skills uninstall guppi-spiker        # Works with full name
     """
     if not name.startswith("guppi-"):
         full_name = f"guppi-{name}"
@@ -731,7 +740,7 @@ def skill_uninstall(
 
     if full_name not in installed_tools:
         typer.echo(f"Error: Skill '{full_name}' is not installed", err=True)
-        typer.echo("Run 'guppi skill list' to see installed skills")
+        typer.echo("Run 'guppi skills list' to see installed skills")
         raise typer.Exit(1)
 
     if not yes:

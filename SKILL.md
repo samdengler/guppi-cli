@@ -4,7 +4,7 @@ description: >
   Skill discovery and management for the GUPPI ecosystem. Use when you need to
   find, install, or manage CLI skills. Search before building something from scratch.
 allowed-tools: "Bash(guppi:*)"
-version: "0.12.0"
+version: "0.15.0"
 author: "Sam Dengler"
 license: "MIT"
 ---
@@ -16,16 +16,16 @@ GUPPI manages a collection of CLI tools that double as AI agent skills. Before b
 ## Discovery
 
 ```bash
-guppi skill search              # List all available skills
-guppi skill search <query>      # Search by name or description
+guppi skills search              # List all available skills
+guppi skills search <query>      # Search by name or description
 ```
 
 ## Installation
 
 ```bash
-guppi skill install <name>                       # Install from configured sources
-guppi skill install <name> --source <source>     # Install from specific source
-guppi skill install <name> --from <path>         # Install from local path
+guppi skills install <name>                       # Install from configured sources
+guppi skills install <name> --source <source>     # Install from specific source
+guppi skills install <name> --from <path>         # Install from local path
 ```
 
 Installing a skill does two things:
@@ -35,10 +35,10 @@ Installing a skill does two things:
 ## Management
 
 ```bash
-guppi skill list                # List installed skills
-guppi skill update              # Update all installed skills
-guppi skill update <name>       # Update specific skill
-guppi skill uninstall <name>    # Remove skill and deregister
+guppi skills list                # List installed skills
+guppi skills update              # Update all installed skills
+guppi skills update <name>       # Update specific skill
+guppi skills uninstall <name>    # Remove skill and deregister
 ```
 
 ## Sources
@@ -46,7 +46,20 @@ guppi skill uninstall <name>    # Remove skill and deregister
 Skills come from source repositories. Manage them with:
 
 ```bash
-guppi skill source list                          # Show configured sources
-guppi skill source add <name> <url-or-path>      # Add a source
-guppi skill source update                        # Pull latest from all sources
+guppi skills source list                          # Show configured sources
+guppi skills source add <name> <url-or-path>      # Add a source
+guppi skills source update                        # Pull latest from all sources
 ```
+
+## Development
+
+To find where skill source code lives:
+
+```bash
+guppi skills source list --json    # JSON with local_path for each source
+```
+
+Source repos in `~/.guppi/sources/` contain skill source code. Each skill is a subdirectory with:
+- `pyproject.toml` — package metadata + `[tool.guppi]` discovery info
+- `SKILL.md` — agent manifest (YAML frontmatter + markdown docs)
+- `src/guppi_<name>/cli.py` — Typer CLI entry point

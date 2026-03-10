@@ -45,7 +45,7 @@ class TestRouteToTool:
             assert exit_code == 1
             assert mock_echo.call_count == 2
             assert "Skill 'nonexistent' not found" in mock_echo.call_args_list[0][0][0]
-            assert "guppi skill search" in mock_echo.call_args_list[1][0][0]
+            assert "guppi skills search" in mock_echo.call_args_list[1][0][0]
 
     def test_route_to_tool_found_in_sources_but_not_installed(self):
         """Test routing to a tool that exists in sources but isn't installed"""
@@ -68,7 +68,7 @@ class TestRouteToTool:
             assert exit_code == 1
             assert mock_echo.call_count == 2
             assert "found in source 'my-source'" in mock_echo.call_args_list[0][0][0]
-            assert "guppi skill install cool-skill" in mock_echo.call_args_list[1][0][0]
+            assert "guppi skills install cool-skill" in mock_echo.call_args_list[1][0][0]
 
     def test_route_to_tool_with_no_args(self):
         """Test routing to a tool with no arguments"""
