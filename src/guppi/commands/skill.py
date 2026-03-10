@@ -470,6 +470,7 @@ def skill_update(
 @app.command("search")
 def search(
     query: Annotated[str | None, typer.Argument(help="Search query (optional - shows all if not provided)")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
     """
     Search for available skills in all sources.
@@ -497,12 +498,28 @@ def search(
             typer.echo(f"No skills found matching '{query}'")
             return
 
+    if json_output:
+        import json
+        data = [
+            {
+                "name": t.name,
+                "description": t.description,
+                "source": t.source,
+                "source_location": t.source_location,
+                "path": str(t.path),
+            }
+            for t in tools
+        ]
+        typer.echo(json.dumps(data, indent=2))
+        return
+
     format_tool_search_table(tools)
 
 
 @app.command("list")
 def list_skills(
     query: Annotated[str | None, typer.Argument(help="Search query to filter skills (optional)")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
     """
     List installed GUPPI skills.
@@ -592,6 +609,11 @@ def list_skills(
         if not installed:
             typer.echo(f"No installed skills found matching '{query}'")
             return
+
+    if json_output:
+        import json
+        typer.echo(json.dumps(installed, indent=2))
+        return
 
     format_tool_list_table(installed)
 

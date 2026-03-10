@@ -4,7 +4,7 @@ description: >
   Skill discovery and management for the GUPPI ecosystem. Use when you need to
   find, install, or manage CLI skills. Search before building something from scratch.
 allowed-tools: "Bash(guppi:*)"
-version: "0.15.0"
+version: "0.15.1"
 author: "Sam Dengler"
 license: "MIT"
 ---
