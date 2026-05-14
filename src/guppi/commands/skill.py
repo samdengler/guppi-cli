@@ -30,7 +30,7 @@ def _sync_skill_md(name: str):
     # Get uv tool directory
     try:
         result = subprocess.run(
-            ["uv", "tool", "dir"],
+            ["uv", "tool", "dir", "--color", "never"],
             capture_output=True, text=True, check=True,
         )
         uv_tool_dir = Path(result.stdout.strip())
@@ -550,7 +550,7 @@ def list_skills(
 
     try:
         tool_dir_result = subprocess.run(
-            ["uv", "tool", "dir"],
+            ["uv", "tool", "dir", "--color", "never"],
             capture_output=True, text=True, check=True,
         )
         uv_tool_dir = Path(tool_dir_result.stdout.strip())
