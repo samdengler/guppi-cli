@@ -1,3 +1,82 @@
+# GUPPI CLI — Agent Instructions
+
+## Project Overview
+
+**GUPPI** (General Use Personal Program Interface) - A Python-based plugin framework for composing deterministic tools. Ultra-lean MVP with Homebrew-style tool management.
+
+**Key Features:**
+- Command routing to tools via `guppi-*` executables
+- Homebrew-inspired source management (add, update, discover)
+- Convention over configuration: tools self-describe via `[tool.guppi]` in pyproject.toml
+- Tool installation via uv (global CLI tools)
+
+## Tech Stack
+
+- **Language**: Python 3.11+
+- **CLI Framework**: Typer
+- **Package Manager**: uv (for tool installation)
+- **Storage**: Git-based (sources in `~/.guppi/sources/`)
+- **Testing**: Python standard testing
+
+## Project Structure
+
+```
+src/guppi/
+├── cli.py              # Main entry point, routing logic
+├── agents.py           # Agent target registry (Claude, Kiro)
+├── commands/           # Subcommands (skill.py, init.py, upgrade.py)
+├── router.py           # Tool routing to guppi-* executables
+├── discovery.py        # Tool discovery from sources
+└── __version__.py      # Version constant
+```
+
+## Dependency Management
+
+This project uses **uv** for dependency management:
+
+```bash
+# Add production dependencies
+uv add package-name
+
+# Add development dependencies
+uv add --dev package-name
+
+# Sync all dependencies (install/update to match lock file)
+uv sync --dev
+
+# Run commands without activating venv
+uv run -- guppi <command>
+uv run -- pytest
+
+# Run tests
+uv run -- pytest              # Run all tests
+uv run -- pytest tests/test_specific.py  # Run specific test file
+uv run -- pytest -v           # Verbose output
+uv run -- pytest --cov        # With coverage report
+
+# Install GUPPI globally for testing
+uv tool install --editable .
+guppi <command>               # Test globally installed version
+```
+
+**Rules:**
+- ✅ Always use `uv add` to add dependencies (NOT manual pyproject.toml edits)
+- ✅ Run `uv sync --dev` after pulling changes
+- ✅ Test both `uv run -- guppi` (local) and globally installed `guppi` command
+
+## Code Style
+
+- New commands go in `commands/` directory (modular pattern)
+- Use subprocess for external commands (uv, git)
+- Always commit `.beads/issues.jsonl` with code changes
+
+## Releases
+
+For version releases, follow the procedure in [RELEASE.md](RELEASE.md):
+- Semantic versioning (major/minor/patch)
+- Update both `pyproject.toml` and `src/guppi/__version__.py`
+- Create git tag and GitHub release with `gh` CLI
+
 ## Issue Tracking with bd (beads)
 
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
@@ -67,20 +146,15 @@ bd automatically syncs with git:
 - Imports from JSONL when newer (e.g., after `git pull`)
 - No manual export/import needed!
 
-### GitHub Copilot Integration
-
-If using GitHub Copilot, also create `.github/copilot-instructions.md` for automatic instruction loading.
-Run `bd onboard` to get the content, or see step 2 of the onboard instructions.
-
 ### MCP Server (Recommended)
 
-If using Claude or MCP-compatible clients, install the beads MCP server:
+If using Claude, Kiro, or other MCP-compatible clients, install the beads MCP server:
 
 ```bash
 pip install beads-mcp
 ```
 
-Add to MCP config (e.g., `~/.config/claude/config.json`):
+Add to MCP config (e.g., `~/.config/claude/config.json` or `.kiro/agents/<name>.json`):
 ```json
 {
   "beads": {
@@ -94,48 +168,25 @@ Then use `mcp__beads__*` functions instead of CLI commands.
 
 ### Managing AI-Generated Planning Documents
 
-AI assistants often create planning and design documents during development:
-- PLAN.md, IMPLEMENTATION.md, ARCHITECTURE.md
-- DESIGN.md, CODEBASE_SUMMARY.md, INTEGRATION_PLAN.md
-- TESTING_GUIDE.md, TECHNICAL_DESIGN.md, and similar files
-
-**Best Practice: Use a dedicated directory for these ephemeral files**
-
 **Recommended approach:**
 - Create a `history/` directory in the project root
 - Store ALL AI-generated planning/design docs in `history/`
 - Keep the repository root clean and focused on permanent project files
-- Only access `history/` when explicitly asked to review past planning
-
-**Example .gitignore entry (optional):**
-```
-# AI planning documents (ephemeral)
-history/
-```
-
-**Benefits:**
-- ✅ Clean repository root
-- ✅ Clear separation between ephemeral and permanent documentation
-- ✅ Easy to exclude from version control if desired
-- ✅ Preserves planning history for archeological research
-- ✅ Reduces noise when browsing the project
 
 ### CLI Help
 
 Run `bd <command> --help` to see all available flags for any command.
-For example: `bd create --help` shows `--parent`, `--deps`, `--assignee`, etc.
 
-### Important Rules
+## Important Rules
 
 - ✅ Use bd for ALL task tracking
-- ✅ Always use `--json` flag for programmatic use
+- ✅ Always use `--json` flag for programmatic bd use
+- ✅ New commands in `commands/` directory
+- ✅ Test with global install: `uv tool install --editable .`
 - ✅ Link discovered work with `discovered-from` dependencies
 - ✅ Check `bd ready` before asking "what should I work on?"
 - ✅ Store AI planning docs in `history/` directory
-- ✅ Run `bd <cmd> --help` to discover available flags
 - ❌ Do NOT create markdown TODO lists
 - ❌ Do NOT use external issue trackers
-- ❌ Do NOT duplicate tracking systems
+- ❌ Do NOT commit `.beads/beads.db` (JSONL only)
 - ❌ Do NOT clutter repo root with planning documents
-
-For more details, see README.md and QUICKSTART.md.

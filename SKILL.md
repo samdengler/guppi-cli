@@ -30,7 +30,7 @@ guppi skills install <name> --from <path>         # Install from local path
 
 Installing a skill does two things:
 1. Installs the CLI tool (via `uv tool install`)
-2. Registers the SKILL.md for agent discovery (copies to `~/.claude/skills/`)
+2. Registers the SKILL.md for agent discovery (copies to `~/.claude/skills/` and/or `~/.kiro/skills/`)
 
 ## Management
 

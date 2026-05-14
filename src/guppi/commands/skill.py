@@ -10,12 +10,11 @@ from typing import Annotated
 import typer
 from giturlparse import parse as parse_git_url
 
+from guppi.agents import get_active_targets
 from guppi.discovery import get_sources_dir, find_tool, find_all_tools, discover_all_tools, is_valid_source
 from guppi.templates import load_and_render_template, sanitize_tool_name, tool_name_to_package
 
 app = typer.Typer(help="Manage GUPPI skills")
-
-CLAUDE_SKILLS_DIR = Path.home() / ".claude" / "skills"
 
 # Create subcommand for source management
 source_app = typer.Typer(help="Manage skill sources")
@@ -23,7 +22,7 @@ app.add_typer(source_app, name="source")
 
 
 def _sync_skill_md(name: str):
-    """Find SKILL.md from an installed guppi-<name> package and copy to ~/.claude/skills/."""
+    """Find SKILL.md from an installed guppi-<name> package and copy to active agent skill dirs."""
     full_name = name if name.startswith("guppi-") else f"guppi-{name}"
     package_name = full_name.replace("-", "_")
     short_name = name.removeprefix("guppi-")
@@ -55,21 +54,33 @@ def _sync_skill_md(name: str):
         typer.echo(f"Note: No SKILL.md found in {full_name} package", err=True)
         return
 
-    # Copy to ~/.claude/skills/<name>/SKILL.md
-    dest_dir = CLAUDE_SKILLS_DIR / short_name
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / "SKILL.md"
-    shutil.copy2(skill_md, dest)
-    typer.echo(f"✓ Registered skill '{short_name}' for Claude Code at {dest}")
+    targets = get_active_targets()
+    if not targets:
+        return
+
+    for agent_name, skills_dir in targets.items():
+        dest_dir = skills_dir / short_name
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / "SKILL.md"
+        shutil.copy2(skill_md, dest)
+
+    agents = " and ".join(targets.keys())
+    typer.echo(f"✓ Registered skill '{short_name}' for {agents}")
 
 
 def _remove_skill_md(name: str):
-    """Remove a skill's SKILL.md from ~/.claude/skills/."""
+    """Remove a skill's SKILL.md from all active agent skill dirs."""
     short_name = name.removeprefix("guppi-")
-    skill_dir = CLAUDE_SKILLS_DIR / short_name
-    if skill_dir.exists():
-        shutil.rmtree(skill_dir)
-        typer.echo(f"✓ Removed skill '{short_name}' from Claude Code")
+    targets = get_active_targets()
+    removed_from = []
+    for agent_name, skills_dir in targets.items():
+        skill_dir = skills_dir / short_name
+        if skill_dir.exists():
+            shutil.rmtree(skill_dir)
+            removed_from.append(agent_name)
+    if removed_from:
+        agents = " and ".join(removed_from)
+        typer.echo(f"✓ Removed skill '{short_name}' from {agents}")
 
 
 @source_app.command("add")

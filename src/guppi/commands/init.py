@@ -5,14 +5,14 @@ from pathlib import Path
 
 import typer
 
-app = typer.Typer(help="Initialize GUPPI")
+from guppi.agents import get_active_targets
 
-CLAUDE_SKILLS_DIR = Path.home() / ".claude" / "skills"
+app = typer.Typer(help="Initialize GUPPI")
 
 
 @app.callback(invoke_without_command=True)
 def init():
-    """Register GUPPI with Claude Code for skill discovery."""
+    """Register GUPPI with AI agents for skill discovery."""
     # Find bundled SKILL.md
     package_dir = Path(__file__).parent.parent
     skill_md = package_dir / "SKILL.md"
@@ -23,12 +23,18 @@ def init():
         typer.echo("Error: SKILL.md not found in guppi package", err=True)
         raise typer.Exit(1)
 
-    # Copy to ~/.claude/skills/guppi/SKILL.md
-    dest_dir = CLAUDE_SKILLS_DIR / "guppi"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / "SKILL.md"
-    shutil.copy2(skill_md, dest)
+    targets = get_active_targets()
+    if not targets:
+        typer.echo("No supported agents detected (~/.claude or ~/.kiro)", err=True)
+        typer.echo("Install Claude Code or Kiro first.", err=True)
+        raise typer.Exit(1)
 
-    typer.echo(f"✓ Registered GUPPI for Claude Code at {dest}")
-    typer.echo("\nClaude will now search for available skills before building from scratch.")
+    for agent_name, skills_dir in targets.items():
+        dest_dir = skills_dir / "guppi"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(skill_md, dest_dir / "SKILL.md")
+
+    agents = " and ".join(targets.keys())
+    typer.echo(f"✓ Registered GUPPI for {agents}")
+    typer.echo("\nYour agent will now search for available skills before building from scratch.")
     typer.echo("Manage skills with: guppi skills --help")
